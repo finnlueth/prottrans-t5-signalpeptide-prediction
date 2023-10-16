@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 numpy = "^1.26.0"
 pandas = "^2.1.1"
 torch = "^2.0.1"
@@ -19,6 +19,8 @@ evaluate = "^0.4.0"
 seqeval = "^1.2.2"
 protobuf = "^4.24.3"
 bitsandbytes = "^0.41.1"
+torchvision = "^0.16.0"
+matplotlib = "^3.8.0"
 
 
 [tool.poetry.group.dev.dependencies]

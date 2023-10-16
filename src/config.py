@@ -1,3 +1,5 @@
+base_model_name = 'Rostlab/prot_t5_xl_uniref50'
+
 label_encoding = {
     "I": 0,
     "L": 1,
@@ -5,9 +7,6 @@ label_encoding = {
     "O": 3,
     "S": 4,
     "T": 5,
-    "X": -1,
-    "Y": 6,
-    "B": 7,
     }
 
 label_decoding = dict(zip(label_encoding.values(), label_encoding.keys()))

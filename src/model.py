@@ -47,9 +47,11 @@ from datasets import Dataset
 
 import src.config as config
 
+
 label_encoding = config.label_encoding
 label_list = config.label_decoding
 seqeval = evaluate.load("seqeval")
+
 
 def get_prottrans_tokenizer_model(base_model_name, model_architecture) -> (T5Tokenizer, T5PreTrainedModel):
     tokenizer = T5Tokenizer.from_pretrained(
@@ -84,8 +86,7 @@ def injected_forward(
     output_attentions=None,
     output_hidden_states=None,
     return_dict=None
-    ):
-
+):
     return_dict = return_dict if return_dict is not None else self.get_base_model().config.use_return_dict
 
     outputs = self.get_base_model().encoder(
@@ -152,13 +153,13 @@ def compute_metrics_full(p):
 def compute_metrics_fast(p):
     metric = load("accuracy")
     predictions, labels = p
-    
+
     labels = labels.reshape((-1,))
-    
+
     predictions = np.argmax(predictions, axis=2)
     predictions = predictions.reshape((-1,))
-    
+
     predictions = predictions[labels != -100]
     labels = labels[labels != -100]
-    
+
     return metric.compute(predictions=predictions, references=labels)
