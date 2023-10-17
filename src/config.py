@@ -7,6 +7,7 @@ label_encoding = {
     "O": 3,
     "S": 4,
     "T": 5,
+    "": -100
     }
 
 label_decoding = dict(zip(label_encoding.values(), label_encoding.keys()))

@@ -80,7 +80,7 @@ def injected_forward(
     input_ids=None,
     attention_mask=None,
     # position_ids=None,
-    head_mask=None,
+    # head_mask=None,
     inputs_embeds=None,
     labels=None,
     output_attentions=None,
@@ -92,13 +92,13 @@ def injected_forward(
     outputs = self.get_base_model().encoder(
         input_ids=input_ids,
         attention_mask=attention_mask,
-        # position_ids=position_ids,
-        head_mask=head_mask,
         inputs_embeds=inputs_embeds,
         output_attentions=output_attentions,
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
     )
+
+    print(outputs)
 
     sequence_output = outputs[0]
 
