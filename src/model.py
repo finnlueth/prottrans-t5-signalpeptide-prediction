@@ -45,11 +45,7 @@ from peft import (
 
 from datasets import Dataset
 
-import src.config as config
 
-
-label_encoding = config.label_encoding
-label_list = config.label_decoding
 seqeval = evaluate.load("seqeval")
 
 
@@ -87,6 +83,7 @@ def injected_forward(
     output_hidden_states=None,
     return_dict=None
 ):
+    print("forward...")
     return_dict = return_dict if return_dict is not None else self.get_base_model().config.use_return_dict
 
     outputs = self.get_base_model().encoder(
@@ -97,7 +94,6 @@ def injected_forward(
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
     )
-    # print(outputs)
 
     sequence_output = outputs[0]
 
@@ -123,30 +119,40 @@ def injected_forward(
     )
 
 
-def inject_linear_layer(t5_lora_model):
+def inject_linear_layer(t5_lora_model, num_labels, dropout_rate):
     t5_lora_model.forward = types.MethodType(injected_forward, t5_lora_model)
+
+    t5_lora_model.dropout = nn.Dropout(dropout_rate)
+    t5_lora_model.num_labels = num_labels
+
+    t5_lora_model.get_base_model().dropout = nn.Dropout(dropout_rate)
+    t5_lora_model.get_base_model().classifier = nn.Linear(
+        in_features=t5_lora_model.get_base_model().config.hidden_size,
+        out_features=num_labels
+    )
+
     return t5_lora_model
 
 
-def compute_metrics_full(p):
-    predictions, labels = p
-    # predictions = np.argmax(predictions, axis=2)
-    true_predictions = [
-        [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
-    true_labels = [
-        [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
+# def compute_metrics_full(p):
+#     predictions, labels = p
+#     # predictions = np.argmax(predictions, axis=2)
+#     true_predictions = [
+#         [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+#         for prediction, label in zip(predictions, labels)
+#     ]
+#     true_labels = [
+#         [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+#         for prediction, label in zip(predictions, labels)
+#     ]
 
-    results = seqeval.compute(predictions=true_predictions, references=true_labels)
-    return {
-        "precision": results["overall_precision"],
-        "recall": results["overall_recall"],
-        "f1": results["overall_f1"],
-        "accuracy": results["overall_accuracy"],
-    }
+#     results = seqeval.compute(predictions=true_predictions, references=true_labels)
+#     return {
+#         "precision": results["overall_precision"],
+#         "recall": results["overall_recall"],
+#         "f1": results["overall_f1"],
+#         "accuracy": results["overall_accuracy"],
+#     }
 
 
 def compute_metrics_fast(p):
