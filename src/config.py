@@ -1,5 +1,6 @@
 from src.model import (
-    compute_metrics_fast
+    compute_metrics_fast,
+    compute_metrics_full
     )
 
 
@@ -27,21 +28,20 @@ urls = {
 }
 
 # Debug
-VERBOSE = True
-
+VERBOSE = False
 
 # Model
 dropout_rate = 0.1
 
-
 # Data
-dataset_size = 2
-
+dataset_size = -1
 
 # Training
+steps = 2
 lr = 1e-3
 batch_size = 16
 num_epochs = 1
-save_steps = 1
-logging_steps = 1
+save_steps = 100
+logging_steps = 20
+eval_steps = steps*5
 metric = compute_metrics_fast

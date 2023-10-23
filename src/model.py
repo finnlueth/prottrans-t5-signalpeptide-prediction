@@ -45,6 +45,7 @@ from peft import (
 
 from datasets import Dataset
 
+import src.config as config
 
 seqeval = evaluate.load("seqeval")
 
@@ -81,12 +82,12 @@ def injected_forward(
     labels=None,
     output_attentions=None,
     output_hidden_states=None,
-    return_dict=None
+    return_dict=None,
 ):
-    print("forward...")
     return_dict = return_dict if return_dict is not None else self.get_base_model().config.use_return_dict
-
-    outputs = self.get_base_model().encoder(
+    # print('abc')
+    
+    encoder_outputs = self.get_base_model().encoder(
         input_ids=input_ids,
         attention_mask=attention_mask,
         inputs_embeds=inputs_embeds,
@@ -94,11 +95,22 @@ def injected_forward(
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
     )
+    
+    # input_ids = input_ids[:, :70]
+    # attention_mask = attention_mask[:, :70]
+    
+    # print(input_ids.shape)
+    # print(attention_mask.shape)
+    
+    # print(type(encoder_outputs[0]))
+    # print(outputs[0].shape)
 
-    sequence_output = outputs[0]
+    sequence_output = encoder_outputs[0]
 
     sequence_output = self.get_base_model().dropout(sequence_output)
     logits = self.classifier(sequence_output)
+
+    # print(logits.view(-1, self.num_labels))
 
     loss = None
     if labels is not None:
@@ -108,14 +120,16 @@ def injected_forward(
         loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
     if not return_dict:
-        output = (logits,) + outputs[2:]
+        output = (logits,) + encoder_outputs[2:]
         return ((loss,) + output) if loss is not None else output
-
+    
+    # print(type(loss))
+    
     return TokenClassifierOutput(
         loss=loss,
         logits=logits,
-        hidden_states=outputs.hidden_states,
-        attentions=outputs.attentions,
+        hidden_states=encoder_outputs.hidden_states,
+        attentions=encoder_outputs.attentions,
     )
 
 
@@ -134,29 +148,30 @@ def inject_linear_layer(t5_lora_model, num_labels, dropout_rate):
     return t5_lora_model
 
 
-# def compute_metrics_full(p):
-#     predictions, labels = p
-#     # predictions = np.argmax(predictions, axis=2)
-#     true_predictions = [
-#         [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
-#         for prediction, label in zip(predictions, labels)
-#     ]
-#     true_labels = [
-#         [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
-#         for prediction, label in zip(predictions, labels)
-#     ]
+def compute_metrics_full(p):
+    predictions, labels = p
+    # predictions = np.argmax(predictions, axis=2)
+    true_predictions = [
+        [config.label_decoding[p] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels)
+    ]
+    true_labels = [
+        [config.label_decoding[l] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels)
+    ]
 
-#     results = seqeval.compute(predictions=true_predictions, references=true_labels)
-#     return {
-#         "precision": results["overall_precision"],
-#         "recall": results["overall_recall"],
-#         "f1": results["overall_f1"],
-#         "accuracy": results["overall_accuracy"],
-#     }
+    results = seqeval.compute(predictions=true_predictions, references=true_labels)
+    return {
+        "precision": results["overall_precision"],
+        "recall": results["overall_recall"],
+        "f1": results["overall_f1"],
+        "accuracy": results["overall_accuracy"],
+    }
 
 
 def compute_metrics_fast(p):
-    metric = load("accuracy")
+    metric = evaluate.load("accuracy")
+    print(p)
     predictions, labels = p
 
     labels = labels.reshape((-1,))
@@ -166,5 +181,7 @@ def compute_metrics_fast(p):
 
     predictions = predictions[labels != -100]
     labels = labels[labels != -100]
-
-    return metric.compute(predictions=predictions, references=labels)
+    
+    m = metric.compute(predictions=predictions, references=labels)
+    
+    return m
