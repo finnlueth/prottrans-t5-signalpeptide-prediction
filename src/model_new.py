@@ -46,10 +46,10 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         output_hidden_states=None,
         return_dict=True
     ):
-        print('--------------- forward ---------------')
+        # print('--------------- forward ---------------')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        encoder_outputs = super().encoder(
+        encoder_outputs = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
             # position_ids=position_ids,
