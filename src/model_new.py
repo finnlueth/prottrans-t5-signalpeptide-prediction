@@ -102,7 +102,7 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
 def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict) -> DatasetDict:
     datasets = {}
     for split_name, split in splits.items():
-        data_split = data[data.Partition_No.isin(split)].head(dataset_size * len(split) if dataset_size else dataset_size)
+        data_split = data[data.Partition_No.isin(split)].sample(n=dataset_size * len(split) if dataset_size else dataset_size, random_state=1)
         tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
         dataset = Dataset.from_dict(tokenized_sequences)
         if annotations_name == 'Label':

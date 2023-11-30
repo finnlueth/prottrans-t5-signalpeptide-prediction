@@ -45,7 +45,7 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-dataset_size = 1
+dataset_size = None
 
 # Training
 steps = 2
@@ -53,7 +53,7 @@ lr = 1e-3
 batch_size = 16
 num_epochs = 1
 save_steps = 100
-logging_steps = 20
+logging_steps = 1
 eval_steps = steps*5
 # metric = compute_metrics_fast
 
