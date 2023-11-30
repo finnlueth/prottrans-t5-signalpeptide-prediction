@@ -45,7 +45,7 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-dataset_size = None
+dataset_size = 1
 
 # Training
 steps = 2

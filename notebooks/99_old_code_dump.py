@@ -218,3 +218,175 @@
 #         "f1": results_seqeval["overall_f1"],
 #         "mcc": results_mcc,
 #     }
+
+
+
+
+
+
+
+
+
+
+# for index, (param_name, param) in enumerate(t5_lora_model.named_parameters()):
+#     if index == 11:
+#         break
+#     # if param.requires_grad:
+#     print(param_name)
+#     print(param)
+
+# _ds_index = 0
+# _ds_type = 'train'
+
+# _instri = t5_tokenizer.decode(dataset_signalp[_ds_type][_ds_index]['input_ids'])
+# _restri = dataset_signalp[_ds_type][_ds_index]['labels']
+# _restri_decoded = [src.config.label_decoding[x] for x in _restri]
+# print(_instri)
+# print(_restri)
+# print(_restri_decoded)
+
+# def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelForTokenClassification):
+#     print('sequence', sequence)
+#     tokenized_string = tokenizer.encode(sequence, padding=True, truncation=True, return_tensors="pt", max_length=1024)
+#     print('tokenized_string', tokenized_string)
+#     with torch.no_grad():
+#         output = model(tokenized_string.to(device))
+#     print('output', output)
+#     return output
+
+# # test_seq = 'M K N W L L L S V P L L L L L G S S S'
+# test_seq = 'M L G T V K M E G H E T S D W N S Y Y A D T Q E A Y S S V P V S N M N S G L G S M N S M N T Y M T M N T M T T S G N M T P A S F N M S Y A N'
+
+# preds = predict_model(test_seq, t5_tokenizer, t5_lora_model)
+
+# preds.logits.argmax(axis=-1)
+
+# print([src.config.label_decoding[x] for x in preds.logits.argmax(axis=-1).tolist()[0]])
+
+# t5_lora_model
+
+# adapter_location = '/models/testing'
+# t5_lora_model.save_pretrained(ROOT + adapter_location)
+
+# for x in t5_lora_model.named_parameters():
+#     print(x[0])
+
+# params = []
+# for index, (param_name, param) in enumerate(t5_base_model.named_parameters()):
+#     # if index == 11:
+#     #     break
+#     if param.requires_grad:
+#         print(param_name)
+#     # print(param)
+#     if param_name in ['custom_classifier.bias', 'custom_classifier.weight']:
+#         print(param)
+#         params.append(param)
+
+# # params[0].sum()
+
+# t5_base_model_reloaded = T5EncoderModelForTokenClassification.from_pretrained(
+#     pretrained_model_name_or_path=src.config.base_model_name,
+#     device_map='auto',
+#     load_in_8bit=False,
+#     custom_num_labels=len(src.config.label_decoding),
+#     custom_dropout_rate=0.1,
+#     )
+
+# t5_base_model_reloaded_original = copy.deepcopy(t5_base_model_reloaded)
+
+# del t5_base_model_reloaded
+# torch.mps.empty_cache()
+
+# adapter_location = '/models/testing'
+# t5_lora_model_reloaded = PeftModel.from_pretrained(
+#     model = t5_base_model_reloaded,
+#     is_trainable=False,
+#     model_id=ROOT+adapter_location,
+#     custom_num_labels=len(src.config.label_decoding),
+#     custom_dropout_rate=0.1,
+# )
+
+# t5_lora_model_copy = copy.deepcopy(t5_lora_model)
+
+
+# for index, (param1, param2) in enumerate(zip(t5_lora_model.parameters(), t5_lora_model_copy.parameters())):
+#     if not torch.equal(param1.data.nan_to_num(), param2.data.nan_to_num()):
+#         print(f"Models have different weights on layer {index}")
+#         # print(param1.data)
+#         # print(param2.data)
+#         # break
+# else:
+#     print("Models have identical weights")
+
+
+# param1.sum()
+
+# param2.sum()
+
+
+# for index, (param1, param2) in enumerate(zip(t5_lora_model_reloaded.parameters(), t5_lora_model.parameters())):
+#     if not torch.equal(param1.data, param2.data):
+#         print(f"Models have different weights on layer {index}")
+#         break
+# else:
+#     print("Models have identical weights")
+
+
+# torch.set_printoptions(profile="default")
+
+
+# z = [x for x in t5_base_model_reloaded.parameters()]
+# a = [x for x in t5_lora_model_reloaded.parameters()]
+# b = [x for x in t5_lora_model.parameters()]
+
+
+# print(len(z)) # base reload
+# print(len(a)) # lora reload
+# print(len(b)) # lora
+
+
+
+# curr_index = 1
+# a[curr_index].shape
+# torch.equal(a[curr_index], b[curr_index])
+
+# print(z[curr_index])
+# print(a[curr_index])
+# print(b[curr_index])
+
+# print(sum(sum(z[curr_index])))
+# print(sum(sum(a[curr_index])))
+# print(sum(sum(b[curr_index])))
+
+# # ds_test[0]
+
+# defaul_reloaded = [x for x in t5_base_model_reloaded.parameters()][195]
+# defaul_reloaded_og = [x for x in t5_base_model_reloaded_original.parameters()][195]
+
+# for index, (x, y) in enumerate(zip(defaul_reloaded, defaul_reloaded_og)):
+#     if not torch.equal(x, y):
+#         print(index)
+#         print(x)
+#         print(y)
+#         print('-------------------')
+        
+# print(*defaul_reloaded[2].tolist())
+# print(*defaul_reloaded_og[2].tolist())
+
+# (defaul_reloaded_og[2].tolist()[9])
+
+
+# with torch.no_grad():
+#     embds_1 = t5_base_model_reloaded.encoder(
+#         input_ids=torch.tensor([[7, 7, 7, 7, 7]]).to('mps'),
+#         attention_mask=torch.tensor([[1, 1, 1, 1, 1]]).to('mps')
+#     )
+    
+    
+# embds_2 = t5_base_model_reloaded_original.forward(
+#     input_ids=torch.tensor([[7, 4, 7, 11, 7]]).to('mps'),
+#     attention_mask=torch.tensor([[1, 1, 1, 1, 1]]).to('mps')
+# )
+
+
+# embds_1.last_hidden_state
