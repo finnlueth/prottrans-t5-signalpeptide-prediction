@@ -56,11 +56,21 @@ def parse_file(path: str) -> pd.DataFrame:
     return pd.DataFrame(items)
 
 
-def process(df_data: pd.DataFrame) -> pd.DataFrame:
+def process_old(df_data: pd.DataFrame) -> pd.DataFrame:
     df_data.Sequence = df_data.Sequence.apply(lambda x: " ".join([*(x)]))
     df_data.Label = df_data.Label.apply(lambda x: [config.label_encoding[x] for x in [*(x)]])
     # df_process_data['Mask'] = df_process_data.Annotation.apply(lambda x: [0 if item == -1 else 1 for item in x])
     df_data['Split'] = df_data['Partition_No'].map(int)
     # df_data['Split'] = df_data.Partition_No.apply(lambda x: "test" if x in ['4'] else "train")
-    df_data.drop(columns=['Partition_No', 'Uniprot_AC', 'Kingdom', 'Type'], inplace=True)
+    # df_data.drop(columns=['Partition_No', 'Uniprot_AC', 'Kingdom', 'Type'], inplace=True)
+    return df_data
+
+
+def process(df_data: pd.DataFrame) -> pd.DataFrame:
+    df_data.Sequence = df_data.Sequence.apply(lambda x: " ".join([*(x)]))
+    # df_data.Label = df_data.Label.apply(lambda x: [config.label_encoding[x] for x in [*(x)]])
+    # df_process_data['Mask'] = df_process_data.Annotation.apply(lambda x: [0 if item == -1 else 1 for item in x])
+    df_data['Partition_No'] = df_data['Partition_No'].map(int)
+    # df_data['Split'] = df_data.Partition_No.apply(lambda x: "test" if x in ['4'] else "train")
+    # df_data.drop(columns=['Partition_No', 'Uniprot_AC', 'Kingdom', 'Type'], inplace=True)
     return df_data
