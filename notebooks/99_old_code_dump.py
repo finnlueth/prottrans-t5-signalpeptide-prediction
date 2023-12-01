@@ -390,3 +390,38 @@
 
 
 # embds_1.last_hidden_state
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def batch_eval_flatten(predictions: np.ndarray, references: np.ndarray):
+#     results = {}
+#     predictions = np.nan_to_num(predictions).argmax(axis=-1)
+#     predictions = np.ndarray.flatten(predictions)
+#     references = np.ndarray.flatten(references)
+    
+#     results.update(accuracy_metric.compute(predictions=predictions, references=references))
+#     results.update(precision_metric.compute(predictions=predictions, references=references, average='micro'))
+#     results.update(recall_metric.compute(predictions=predictions, references=references, average='micro'))
+#     results.update(f1_metric.compute(predictions=predictions, references=references, average='micro'))
+#     # results.update(roc_auc_score_metric.compute(prediction_scores=predictions, references=references, average='micro'))
+#     results.update(matthews_correlation_metric.compute(predictions=predictions, references=references, average='micro'))
+#     return results
+# # display(batch_eval_flatten(predictions.numpy(), references.numpy()))

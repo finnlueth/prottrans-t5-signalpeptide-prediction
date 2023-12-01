@@ -65,7 +65,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
 
         loss = None
         if labels is not None:
-            # print('found labels')
+            print('found labels')
             loss_fct = nn.CrossEntropyLoss()
 
             labels = labels.to(logits.device)
@@ -101,16 +101,28 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
 
 def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict) -> DatasetDict:
     datasets = {}
-    for split_name, split in splits.items():
-        data_split = data[data.Partition_No.isin(split)].sample(n=dataset_size * len(split) if dataset_size else dataset_size, random_state=1)
-        tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
-        dataset = Dataset.from_dict(tokenized_sequences)
-        if annotations_name == 'Label':
-            dataset = dataset.add_column("labels", [[encoder[y] for y in x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
-        if annotations_name == 'Type':
-            dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
-        datasets[split_name] = dataset
-    return DatasetDict(datasets)
-
+    
+    if dataset_size:
+        for split_name, split in splits.items():
+            data_split = data[data.Partition_No.isin(split)].sample(n=dataset_size * len(split) if dataset_size else dataset_size, random_state=1)
+            tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
+            dataset = Dataset.from_dict(tokenized_sequences)
+            if annotations_name == 'Label':
+                dataset = dataset.add_column("labels", [[encoder[y] for y in x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
+            if annotations_name == 'Type':
+                dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
+            datasets[split_name] = dataset
+        return DatasetDict(datasets)
+    else:
+        for split_name, split in splits.items():
+            data_split = data[data.Partition_No.isin(split)]
+            tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
+            dataset = Dataset.from_dict(tokenized_sequences)
+            if annotations_name == 'Label':
+                dataset = dataset.add_column("labels", [[encoder[y] for y in x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
+            if annotations_name == 'Type':
+                dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
+            datasets[split_name] = dataset
+        return DatasetDict(datasets)
 
 # [encoder[x] for x in data[annotations_name].to_list()]
