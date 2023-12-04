@@ -56,7 +56,6 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # print(self.encoder)
-
         encoder_outputs = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
