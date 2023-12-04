@@ -38,6 +38,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             in_features=self.config.hidden_size,
             out_features=self.custom_num_labels
         )
+        self.printed_initial_loss = False
 
 # From https://github.com/huggingface/transformers/blob/v4.35.2/src/transformers/models/bert/modeling_bert.py#L1716
     def forward(
@@ -65,31 +66,31 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             return_dict=return_dict,
         )
         
-        print('self.encoder', super().forward)
+        # print('self.encoder', super().forward)
         
-        print('self.config.hidden_size', self.config.hidden_size)
-        print('self.custom_num_labels', self.custom_num_labels)
-        print()
-        print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
+        # print('self.config.hidden_size', self.config.hidden_size)
+        # print('self.custom_num_labels', self.custom_num_labels)
+        # print()
+        # print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
         
         sequence_output = encoder_outputs.last_hidden_state
 
         sequence_output = self.custom_dropout(sequence_output)
-        print('sequence_output dropout', sequence_output)
+        # print('sequence_output dropout', sequence_output)
         logits = self.custom_classifier(sequence_output)
-        print('sequence_output linear', sequence_output)
+        # print('sequence_output linear', sequence_output)
         
         # print(self.custom_num_labels)
 
         loss = None
         if labels is not None:
-            print('found labels')
+            # print('found labels')
             # print(labels)
             loss_fct = CrossEntropyLoss()
             
-            print('logits.device', logits.device)
+            # print('logits.device', logits.device)
             labels = labels.to(logits.device)
-            print(labels)
+            # print(labels)
             # print(logits.view(-1, self.custom_num_labels))
             # print(labels.view(-1))
             # print()
@@ -97,7 +98,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             # print(labels.view(-1).shape)
             
             loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
-            print('loss', loss)
+            # print('loss', loss)
 
         # print('return_dict', return_dict)
         # print('loss', loss)
@@ -107,7 +108,9 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         # print('encoder_outputs.hidden_states', encoder_outputs.hidden_states)
         # print(*encoder_outputs)
         # print('------------- end forward -------------')
-        print('loss', loss)
+        if not self.printed_initial_loss:
+            print('loss', loss)
+            self.printed_initial_loss = True
         
         if not return_dict:
             output = (logits,) + encoder_outputs[2:]

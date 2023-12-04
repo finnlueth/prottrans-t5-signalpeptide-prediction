@@ -45,10 +45,10 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-dataset_size = 3
+dataset_size = None
 
 # Training
-steps = 2
+steps = 30
 lr = 1e-3
 batch_size = 16
 num_epochs = 1
