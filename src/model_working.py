@@ -97,12 +97,12 @@ def injected_forward(
         return_dict=return_dict,
     )
     
-    print('self.get_base_model().forward', self.get_base_model().forward)
+    # print('self.get_base_model().forward', self.get_base_model().forward)
     
-    print('self.config.hidden_size', self.get_base_model().config.hidden_size)
-    print('self.num_labels', self.num_labels)
-    print()
-    print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
+    # print('self.config.hidden_size', self.get_base_model().config.hidden_size)
+    # print('self.num_labels', self.num_labels)
+    # print()
+    # print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
     
     # input_ids = input_ids[:, :70]
     # attention_mask = attention_mask[:, :70]
@@ -116,26 +116,26 @@ def injected_forward(
     sequence_output = encoder_outputs.last_hidden_state
 
     sequence_output = self.custom_dropout(sequence_output)
-    print('sequence_output dropout', sequence_output)
+    # print('sequence_output dropout', sequence_output)
     logits = self.custom_classifier(sequence_output)
-    print('sequence_output linear', sequence_output)
+    # print('sequence_output linear', sequence_output)
 
     # print(self.num_labels)
     # print(logits.view(-1, self.num_labels))
 
     loss = None
     if labels is not None:
-        print('found labels')
+        # print('found labels')
         loss_fct = CrossEntropyLoss()
 
-        print('logits.device', logits.device)
+        # print('logits.device', logits.device)
         labels = labels.to(logits.device)
-        print(labels)
+        # print(labels)
         
         loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-        print('loss', loss)
+        # print('loss', loss)
     
-    print('loss', loss)
+    # print('loss', loss)
     
     if not return_dict:
         output = (logits,) + encoder_outputs[2:]

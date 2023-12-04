@@ -45,7 +45,7 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-dataset_size = None
+dataset_size = 3
 
 # Training
 steps = 30
@@ -55,6 +55,7 @@ num_epochs = 1
 save_steps = 100
 logging_steps = 1
 eval_steps = steps*5
+eval_steps = 1
 # metric = compute_metrics_fast
 
 model_name = 'linear_model_v4'
