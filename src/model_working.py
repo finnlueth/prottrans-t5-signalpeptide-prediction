@@ -86,8 +86,9 @@ def injected_forward(
 ):
     return_dict = return_dict if return_dict is not None else self.get_base_model().config.use_return_dict
     # print('abc')
+    # print(self)
     
-    encoder_outputs = self.get_base_model().encoder(
+    encoder_outputs = self.get_base_model().forward(
         input_ids=input_ids,
         attention_mask=attention_mask,
         inputs_embeds=inputs_embeds,
@@ -95,6 +96,13 @@ def injected_forward(
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
     )
+    
+    print('self.get_base_model().forward', self.get_base_model().forward)
+    
+    print('self.config.hidden_size', self.get_base_model().config.hidden_size)
+    print('self.num_labels', self.num_labels)
+    print()
+    print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
     
     # input_ids = input_ids[:, :70]
     # attention_mask = attention_mask[:, :70]
@@ -105,20 +113,30 @@ def injected_forward(
     # print(type(encoder_outputs[0]))
     # print(outputs[0].shape)
 
-    sequence_output = encoder_outputs[0]
+    sequence_output = encoder_outputs.last_hidden_state
 
-    sequence_output = self.get_base_model().dropout(sequence_output)
-    logits = self.classifier(sequence_output)
+    sequence_output = self.custom_dropout(sequence_output)
+    print('sequence_output dropout', sequence_output)
+    logits = self.custom_classifier(sequence_output)
+    print('sequence_output linear', sequence_output)
 
+    # print(self.num_labels)
     # print(logits.view(-1, self.num_labels))
 
     loss = None
     if labels is not None:
+        print('found labels')
         loss_fct = CrossEntropyLoss()
 
+        print('logits.device', logits.device)
         labels = labels.to(logits.device)
+        print(labels)
+        
         loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
+        print('loss', loss)
+    
+    print('loss', loss)
+    
     if not return_dict:
         output = (logits,) + encoder_outputs[2:]
         return ((loss,) + output) if loss is not None else output
@@ -136,11 +154,10 @@ def injected_forward(
 def inject_linear_layer(t5_lora_model, num_labels, dropout_rate):
     t5_lora_model.forward = types.MethodType(injected_forward, t5_lora_model)
 
-    t5_lora_model.dropout = nn.Dropout(dropout_rate)
+    t5_lora_model.custom_dropout = nn.Dropout(dropout_rate)
     t5_lora_model.num_labels = num_labels
 
-    t5_lora_model.get_base_model().dropout = nn.Dropout(dropout_rate)
-    t5_lora_model.get_base_model().classifier = nn.Linear(
+    t5_lora_model.custom_classifier = nn.Linear(
         in_features=t5_lora_model.get_base_model().config.hidden_size,
         out_features=num_labels
     )
