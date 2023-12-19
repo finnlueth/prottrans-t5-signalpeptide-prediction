@@ -3,6 +3,7 @@ import time
 
 from transformers import (
     T5EncoderModel,
+    T5PreTrainedModel,
     T5Tokenizer,
     T5Config,
     modeling_outputs,
@@ -13,6 +14,7 @@ from torch.nn import (
     MSELoss
 )
 
+import torch
 import torch.nn as nn
 
 import peft
@@ -56,8 +58,13 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         # print('--------------- forward ---------------')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        # print('custom_classifier', self.custom_classifier.weight)
+        # print('custom_classifier nans', self.custom_classifier.weight.isnan().any())
+        # print('custom_classifier', self.custom_classifier.modules_to_save.default.weight)
+        # print('custom_classifier nans', self.custom_classifier.modules_to_save.default.weight.isnan().any())
+        # print('attention_mask', attention_mask)
         # print(self.encoder)
-        encoder_outputs = super().forward(
+        encoder_outputs = self.encoder(
             input_ids=input_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
@@ -65,38 +72,45 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        
         # print('self.encoder', super().forward)
-        
+
         # print('self.config.hidden_size', self.config.hidden_size)
         # print('self.custom_num_labels', self.custom_num_labels)
         # print()
         # print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
-        
+        # print('encoder_outputs.last_hidden_state shape', encoder_outputs.last_hidden_state.shape)
+
         sequence_output = encoder_outputs.last_hidden_state
 
+        # print('sequence_output', sequence_output)
+        # print('sequence_output min', sequence_output.min())
+        # print('sequence_output max', sequence_output.max())
+        # print('sequence_output hasnan', sequence_output.isnan().any())
         sequence_output = self.custom_dropout(sequence_output)
         # print('sequence_output dropout', sequence_output)
         logits = self.custom_classifier(sequence_output)
         # print('sequence_output linear', sequence_output)
-        
+
         # print(self.custom_num_labels)
 
         loss = None
         if labels is not None:
             # print('found labels')
-            # print(labels)
+            # print('labels', labels.view(-1, self.custom_num_labels))
             loss_fct = CrossEntropyLoss()
-            
+
             # print('logits.device', logits.device)
             labels = labels.to(logits.device)
             # print(labels)
-            # print(logits.view(-1, self.custom_num_labels))
-            # print(labels.view(-1))
+            # print('labels', labels.view(-1))
+            # print('labels', labels.view(-1).shape)
+            # print('labels hasnan', labels.view(-1).isnan().any())
+            # print('logits', logits.view(-1, self.custom_num_labels))
+            # print('logits', logits.view(-1, self.custom_num_labels).shape)
+            # print('logits hasnan', logits.view(-1, self.custom_num_labels).isnan().any())
+            # print('logits', logits.view(-1, self.custom_num_labels).argmax(dim=-1))
             # print()
-            # print(logits.view(-1, self.custom_num_labels).shape)
-            # print(labels.view(-1).shape)
-            
+
             loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
             # print('loss', loss)
 
@@ -108,10 +122,12 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         # print('encoder_outputs.hidden_states', encoder_outputs.hidden_states)
         # print(*encoder_outputs)
         # print('------------- end forward -------------')
+        # print('custom_classifier', self.custom_classifier.modules_to_save.default.weight)
+        # print('custom_classifier nans', self.custom_classifier.modules_to_save.default.weight.isnan().any())
         if not self.printed_initial_loss:
             print('loss', loss)
             self.printed_initial_loss = True
-        
+
         if not return_dict:
             output = (logits,) + encoder_outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -132,7 +148,7 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
 
 def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict) -> DatasetDict:
     datasets = {}
-    
+
     if dataset_size:
         for split_name, split in splits.items():
             data_split = data[data.Partition_No.isin(split)].sample(n=dataset_size * len(split) if dataset_size else dataset_size, random_state=1)
@@ -143,7 +159,6 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
             if annotations_name == 'Type':
                 dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
             datasets[split_name] = dataset
-        return DatasetDict(datasets)
     else:
         for split_name, split in splits.items():
             data_split = data[data.Partition_No.isin(split)]
@@ -154,14 +169,14 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
             if annotations_name == 'Type':
                 dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
             datasets[split_name] = dataset
-        return DatasetDict(datasets)
-
-# [encoder[x] for x in data[annotations_name].to_list()]
+    for x in datasets.values():
+        x.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
+    return DatasetDict(datasets)
 
 
 def create_datasets_head(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict) -> DatasetDict:
     datasets = {}
-    
+
     for split_name, split in splits.items():
         data_split = data[data.Partition_No.isin(split)].head(dataset_size * len(split) if dataset_size else dataset_size)
         tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)

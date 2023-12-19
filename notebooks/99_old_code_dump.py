@@ -394,8 +394,77 @@
 
 
 
+# print(*[(n, type(m)) for n, m in t5_base_model.named_modules()], sep='\n')
 
 
+# t5_lora_model = t5_base_model
+# print(*[(n, type(m)) for n, m in t5_lora_model.named_modules()], sep='\n')
+# t5_lora_model
+# t5_lora_model.encoder.block[4].layer[0].SelfAttention.v.lora_A.default.weight
+
+
+# count_params = 0
+
+# for name, param in t5_lora_model.base_model.named_parameters():
+#     # if "lora" not in name:
+#     #     continue
+#     count_params += param.numel()
+#     print(f"New parameter {name:<13} | {param.numel():>5} parameters | updated")
+
+
+# params_before = dict(t5_base_model_copy.named_parameters())
+# for name, param in t5_lora_model.base_model.named_parameters():
+#     if "lora" in name:
+#         continue
+
+#     name_before = name.partition(".")[-1].replace("original_", "").replace("module.", "").replace("modules_to_save.default.", "")
+#     param_before = params_before[name_before]
+#     if torch.allclose(param, param_before):
+#         print(f"Parameter {name_before:<14} | {param.numel():>7} parameters | not updated")
+#     else:
+#         print(f"Parameter {name_before:<14} | {param.numel():>7} parameters | updated")
+
+
+# print(*[(n, type(m)) for n, m in t5_base_model.named_modules()], sep='\n')
+
+
+
+
+
+
+
+
+
+
+
+
+
+# predictions = torch.tensor([[[1,0,0,0,1], [2,3,2,1,2], [2,2,5,1,3]],
+#                             [[1,2,0,0,0], [1,float('nan'),1,0,100], [1,4,3,7,10]]])
+# predictions_argmaxed = np.nan_to_num(predictions).argmax(axis=-1)
+# predictions_argmaxed = predictions.nan_to_num().argmax(dim=-1)
+# print(predictions_argmaxed)
+
+# references = torch.tensor([[0,1,3], [1,4,3]])
+# print(references)
+
+# torch.Size([3, 71, 1024])
+# print(predictions.shape)
+
+references = torch.tensor(dataset_signalp['train'][:2]['labels'])[1:2].cpu().numpy()
+predictions = torch.tensor(dataset_signalp['train'][:2]['labels'])[1:2].cpu().numpy()
+
+predictions[:,-1] = 4
+# predictions[:,-2] = 2
+# references = references[:,:-1]
+
+# print(references)
+# print(predictions)
+
+
+# results = recall_metric.compute(predictions=predictions[0], references=references[0], average='micro')
+# results = roc_auc_score_metric.compute(prediction_scores=(predictions[0], 6), references=references[0], multi_class='ovr')
+# print(results)
 
 
 
@@ -425,3 +494,79 @@
 #     results.update(matthews_correlation_metric.compute(predictions=predictions, references=references, average='micro'))
 #     return results
 # # display(batch_eval_flatten(predictions.numpy(), references.numpy()))
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def confusion_matrix(vals):
+#     """Computes the confusion matrix for a given set of predictions and references.
+#     Args:
+#         predictions: A list of predicted labels.
+#         references: A list of reference labels.
+#     Returns:
+#         A numpy array representing the confusion matrix.
+#     """
+#     num_labels = len(src.config.label_decoding)
+#     confusion_matrix = np.zeros((num_labels, num_labels), dtype=np.int32)
+#     for prediction, reference in vals:
+#         confusion_matrix[reference, prediction] += 1
+#     return confusion_matrix
+
+
+
+
+
+
+
+    results.update({'FP': FP})
+    results.update({'FN': FN})
+    results.update({'TP': TP})
+    results.update({'TN': TN})
+    results.update({'TPR': TPR})
+    results.update({'TNR': TNR})
+    results.update({'PPV': PPV})
+    results.update({'NPV': NPV})
+    results.update({'FPR': FPR})
+    results.update({'FNR': FNR})
+    results.update({'FDR': FDR})
+    results.update({'ACC': ACC})
+    
+    
+    FP = confusion_matrix.sum(axis=0) - np.diag(confusion_matrix)
+    FN = confusion_matrix.sum(axis=1) - np.diag(confusion_matrix)
+    TP = np.diag(confusion_matrix)
+    TN = confusion_matrix.sum() - (FP + FN + TP)
+    TPR = TP/(TP+FN)
+    TNR = TN/(TN+FP) 
+    PPV = TP/(TP+FP)
+    NPV = TN/(TN+FN)
+    FPR = FP/(FP+TN)
+    FNR = FN/(TP+FN)
+    FDR = FP/(TP+FP)
+    ACC = (TP+TN)/(TP+FP+FN+TN)
+    
+    
+    
+    # print(*[(n, type(m)) for n, m in t5_base_model.named_modules()], sep='\n')
+    
+        # print('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= preds compute_metrics start =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=')
+    # print(p[0].shape, p[1].shape)
+    # print(p[0].argmax(axis=-1))
+    # print(p[1])
+    
+    # metrics = compute_metrics((predictions, references))
+    
+    # print('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= preds compute_metrics stop =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=')
+
+
+
+# t5_lora_model.encoder.block[4].layer[0].SelfAttention.v.lora_A.default.weight

@@ -85,10 +85,15 @@ def injected_forward(
     return_dict=None,
 ):
     return_dict = return_dict if return_dict is not None else self.get_base_model().config.use_return_dict
+    
+    # print('custom_classifier', self.custom_classifier.weight)
+    # print('custom_classifier nans', self.custom_classifier.weight.isnan().any())
+    
     # print('abc')
     # print(self)
     
-    encoder_outputs = self.get_base_model().forward(
+    # encoder_outputs = self.get_base_model().forward(
+    encoder_outputs = self.encoder(
         input_ids=input_ids,
         attention_mask=attention_mask,
         inputs_embeds=inputs_embeds,
@@ -115,9 +120,9 @@ def injected_forward(
 
     sequence_output = encoder_outputs.last_hidden_state
 
-    sequence_output = self.custom_dropout(sequence_output)
+    sequence_output = self.get_base_model().custom_dropout(sequence_output)
     # print('sequence_output dropout', sequence_output)
-    logits = self.custom_classifier(sequence_output)
+    logits = self.get_base_model().custom_classifier(sequence_output)
     # print('sequence_output linear', sequence_output)
 
     # print(self.num_labels)
@@ -151,13 +156,13 @@ def injected_forward(
     )
 
 
-def inject_linear_layer(t5_lora_model, num_labels, dropout_rate):
-    t5_lora_model.forward = types.MethodType(injected_forward, t5_lora_model)
+def inject_linear_layer(t5_lora_model: PeftModel, num_labels: int, dropout_rate: float):
+    t5_lora_model.get_base_model().forward = types.MethodType(injected_forward, t5_lora_model)
 
-    t5_lora_model.custom_dropout = nn.Dropout(dropout_rate)
+    t5_lora_model.get_base_model().custom_dropout = nn.Dropout(dropout_rate)
     t5_lora_model.num_labels = num_labels
 
-    t5_lora_model.custom_classifier = nn.Linear(
+    t5_lora_model.get_base_model().custom_classifier = nn.Linear(
         in_features=t5_lora_model.get_base_model().config.hidden_size,
         out_features=num_labels
     )
