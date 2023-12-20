@@ -80,7 +80,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         # print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
         # print('encoder_outputs.last_hidden_state shape', encoder_outputs.last_hidden_state.shape)
 
-        sequence_output = encoder_outputs.last_hidden_state
+        sequence_output = encoder_outputs['last_hidden_state']
 
         # print('sequence_output', sequence_output)
         # print('sequence_output min', sequence_output.min())
@@ -90,9 +90,11 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         # print('sequence_output dropout', sequence_output)
         logits = self.custom_classifier(sequence_output)
         # print('sequence_output linear', sequence_output)
-
+        
         # print(self.custom_num_labels)
-
+        # print(self.custom_classifier.modules_to_save.default.weight)
+        
+        # print(labels)
         loss = None
         if labels is not None:
             # print('found labels')
@@ -169,8 +171,8 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
             if annotations_name == 'Type':
                 dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
             datasets[split_name] = dataset
-    for x in datasets.values():
-        x.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
+    # for x in datasets.values():
+    #     x.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
     return DatasetDict(datasets)
 
 
