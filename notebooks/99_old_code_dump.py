@@ -570,3 +570,151 @@ predictions[:,-1] = 4
 
 
 # t5_lora_model.encoder.block[4].layer[0].SelfAttention.v.lora_A.default.weight
+
+
+
+
+
+
+
+
+
+
+
+
+# t5_lora_model.to(device)
+
+# vals = 0,1,2
+# with torch.no_grad():
+#     preds = t5_lora_model(
+#         input_ids=torch.tensor(dataset_signalp['valid'][vals]['input_ids']).to(device),
+#         # attention_mask=torch.tensor(dataset_signalp['test'][0:1]['attention_mask']).to(device),
+#         # labels=torch.tensor(dataset_signalp['test'][0:1]['labels']).to(device)
+# _p = preds.logits.cpu().numpy()
+# _t = np.array([np.pad(x, (0, 71 - len(x)), mode='constant', constant_values=-100) for x in dataset_signalp['valid'][vals]['labels']])
+# metrics = compute_metrics(p=(_p, _t))
+# print(metrics)#         )
+
+# _p = preds.logits.cpu().numpy()
+# _t = np.array([np.pad(x, (0, 71 - len(x)), mode='constant', constant_values=-100) for x in dataset_signalp['valid'][vals]['labels']])
+# metrics = compute_metrics(p=(_p, _t))
+# print(metrics)
+
+# pd.DataFrame(preds.logits.softmax(dim=-1).cpu()[0]).plot()
+
+# roc_auc_score = evaluate.load("roc_auc", "multiclass")
+# refs = [1, 0, 1, 2, 2, 0]
+# pred_scores = [[0.3, 0.5, 0.2],
+#                [0.7, 0.2, 0.1],
+#                [0.005, 0.99, 0.005],
+#                [0.2, 0.3, 0.5],
+#                [0.1, 0.1, 0.8],
+#                [0.1, 0.7, 0.2]]
+# results = roc_auc_score.compute(references=refs,
+#                                 prediction_scores=pred_scores,
+#                                 multi_class='ovr')
+# print(round(results['roc_auc'], 2))
+
+# print(np.array(refs))
+# print(np.array(pred_scores))
+
+# p = preds.logits.cpu().numpy()
+# t = np.array(dataset_signalp['valid'][0:1]['labels'])
+# t = np.pad(t, ((0, 0), (0, 71 - t.shape[1])), mode='constant', constant_values=-100)
+# compute_metrics(p=(p, t))
+
+# x = 10
+# truth = t[:, :x][0]
+# truth = [1,2,3,4,5,6,5,5,5,5]
+# preds = torch.tensor(p[:, :x][0]).softmax(axis=-1).cpu().numpy()
+# print(truth)
+# print(preds)
+
+# results = roc_auc_score.compute(references=truth,
+#                                 prediction_scores=preds,
+#                                 multi_class='ovr',
+#                                 labels=[1, 2, 3, 4, 5, 6])
+# print(round(results['roc_auc'], 2))
+
+# predictions = torch.tensor([
+#     # [[1,0,0,0,1], [2,3,2,1,2], [2,2,5,1,3]],
+#     [[1,2,0,0,0], [1,float('nan'),1,0,100], [1,4,3,7,10]]
+#     ])
+
+# references = torch.tensor([
+#     # [0,1,2],
+#     [1,4,4]
+#     ])
+
+# def softmax(X, axis=0):
+#     return np.exp(X)#/np.sum(np.exp(X), axis=axis)
+
+# print(softmax(predictions.numpy(), axis=2))
+# print()
+# print(predictions.softmax(dim=-1))
+
+# print(predictions.softmax(dim=-1)[0][0])
+# compute_metrics((predictions.numpy(), references.numpy()))
+
+
+# t5_base_model_copy = copy.deepcopy(t5_base_model)
+
+
+
+# for name, param in t5_lora_model.base_model.named_parameters():
+#     if "lora" not in name:
+#         continue
+#     if param.isnan().any():
+#         print(f"New parameter {name:<13} | {param.numel():>5} parameters | not updated")
+#     else:
+#         print(f"New parameter {name:<13} | {param.numel():>5} parameters | updated")
+
+
+
+# params_before = dict(t5_base_model_copy.named_parameters())
+# for name, param in t5_lora_model.base_model.named_parameters():
+#     if "lora" in name:
+#         continue
+
+#     name_before = name.partition(".")[-1].replace("original_", "").replace("module.", "").replace("modules_to_save.default.", "")
+#     param_before = params_before[name_before]
+#     if torch.allclose(param, param_before):
+#         print(f"Parameter {name_before:<14} | {param.numel():>7} parameters | not updated")
+#     else:
+#         print(f"Parameter {name_before:<14} | {param.numel():>7} parameters | updated")
+
+
+
+
+
+
+# params_trained = [(n, m) for n, m in t5_lora_model.named_parameters() if 'original' not in n]
+# params_reloaded = [(n, m) for n, m in t5_base_model_copy.named_parameters() if 'original' not in n]
+
+# for param_trained, param_reloaded in zip(params_trained, params_reloaded):
+#     if torch.eq(param_trained[1].data, param_reloaded[1].data).all():
+#         # print(f"Parameter {param_trained[0]} and {param_reloaded[0]} equal")
+#         pass
+#     else:
+#         print(f"Parameter {param_trained[0]} and {param_reloaded[0]} not equal")
+
+
+
+
+
+
+
+
+
+
+t5_base_model_copy.load_adapter(ROOT+adapter_location)
+t5_base_model_copy.to(device)
+preds = predict_model(_inids_test, t5_tokenizer, t5_base_model_copy)
+_res = translate_logits(preds.logits.cpu().numpy())
+print(_res)
+print(t5_base_model_copy.custom_classifier.weight)
+print(t5_base_model_copy.custom_classifier.bias)
+print(t5_lora_model.model.custom_classifier.modules_to_save.default.weight)
+print(t5_lora_model.model.custom_classifier.modules_to_save.default.bias)
+print(t5_lora_model.model.custom_classifier.original_module.weight)
+print(t5_lora_model.model.custom_classifier.original_module.bias)

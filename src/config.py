@@ -6,29 +6,33 @@ splits = {
     'test': [4]
 }
 
-#Encodings
-label_encoding = {
-    "I": 0,
-    "L": 1,
-    "M": 2,
-    "O": 3,
-    "S": 4,
-    "T": 5,
-    }
+# Encodings
+label_encoding = {"I": 0, "L": 1, "M": 2, "O": 3, "S": 4, "T": 5}
 label_decoding = dict(zip(label_encoding.values(), label_encoding.keys()))
 
-type_encoding = {
-    'NO_SP': 0,
-    'SP': 1,
-    'LIPO': 2,
-    'TAT': 3,
-}
+label_encoding_NO_SP = {"I": 0, "M": 1, "O": 2}
+label_decoding_NO_SP = dict(zip(label_encoding_NO_SP.values(), label_encoding_NO_SP.keys()))
+
+label_encoding_SP = {"I": 0, "M": 1, "O": 2, "S": 3}
+label_decoding_SP = dict(zip(label_encoding_SP.values(), label_encoding_SP.keys()))
+
+label_encoding_LIPO = {"I": 0, "L": 1, "M": 2, "O": 3}
+label_decoding_LIPO = dict(zip(label_encoding_LIPO.values(), label_encoding_LIPO.keys()))
+
+label_encoding_TAT = {"O": 0, "T": 1}
+label_decoding_TAT = dict(zip(label_encoding_TAT.values(), label_encoding_TAT.keys()))
+
+
+type_encoding = {'NO_SP': 0, 'SP': 1, 'LIPO': 2, 'TAT': 3}
 type_decoding = dict(zip(type_encoding.values(), type_encoding.keys()))
 
 select_encodings = {
     'Label': label_encoding,
     'Type': type_encoding,
 }
+
+select_encoding_type = {'NO_SP': label_encoding_NO_SP, 'SP': label_encoding_SP, 'LIPO': label_encoding_LIPO, 'TAT': label_encoding_TAT}
+select_decoding_type = {'NO_SP': label_decoding_NO_SP, 'SP': label_decoding_SP, 'LIPO': label_decoding_LIPO, 'TAT': label_decoding_TAT}
 
 # Dataset URLs
 urls = {
