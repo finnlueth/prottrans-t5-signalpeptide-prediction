@@ -1,6 +1,8 @@
 import gc
 import time
 
+import seaborn as sns
+
 from transformers import (
     T5EncoderModel,
     T5PreTrainedModel,
@@ -75,12 +77,16 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        
 
         sequence_output = encoder_outputs['last_hidden_state']
 
         # if labels is not None:
         sequence_output = self.custom_dropout(sequence_output)
         logits = self.custom_classifier(sequence_output)
+        print(logits.min(), logits.max())
+        print(torch.isnan(sequence_output).any()
+)
 
         loss = None
         decoded_tags = None
@@ -98,14 +104,23 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
                     mask=attention_mask_re.type(torch.uint8)
                 )
                 loss = -log_likelihood
+                print('neglog_likelihood', loss)
             else:
                 decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
         else:
             if labels is not None:
                 loss_fct = CrossEntropyLoss()
                 labels = labels.to(self.device)
+                
+                # print('labels', labels.shape, labels)
+                # print('logits', logits.view(-1, self.custom_num_labels))
+                # print('labels', labels.view(-1))
+                
                 loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
-                # print(loss)
+                if loss > 2:
+                    print('logits', logits.view(-1, self.custom_num_labels))
+                    print('labels', labels.view(-1))
+                    print(loss)
             
         # print('decoded_tags', decoded_tags, type(decoded_tags))
         # print('logits', logits, logits.shape)
@@ -289,17 +304,36 @@ def translate_logits(logits, viterbi_decoding=False):
         return [src.config.label_decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
 
+
+def make_confusion_matrix(data_cm, decoding):
+    
+    print(decoding)
+    ax = sns.heatmap(
+        data_cm,
+        annot=True,
+        xticklabels=[decoding[label] for label in range(len(decoding))],
+        yticklabels=[decoding[label] for label in range(len(decoding))],
+        fmt='d'
+    )
+
+    ax.set_title('Confusion Matrix')
+    ax.set_xlabel('Actual')
+    ax.set_ylabel('Predicted')
+    
+    return ax
+
+
+###################################################
+# Metrics
+###################################################
+
+
 accuracy_metric = evaluate.load("accuracy")
 precision_metric = evaluate.load("precision")
 recall_metric = evaluate.load("recall")
 f1_metric = evaluate.load("f1")
 # roc_auc_score_metric = evaluate.load("roc_auc", "multiclass")
 matthews_correlation_metric = evaluate.load("matthews_correlation")
-
-
-###################################################
-# Metrics
-###################################################
 
 
 def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
