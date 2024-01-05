@@ -82,6 +82,9 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         decoded_tags = None
         if self.use_crf:
             if labels is not None:
+                print('logits', logits.shape, logits)
+                print('labels', labels.shape, labels)
+                print('attention_mask', attention_mask.shape, attention_mask)
                 log_likelihood = self.crf(emissions=logits, tags=labels, mask=attention_mask.type(torch.uint8))
                 loss = -log_likelihood
             else:
@@ -269,7 +272,7 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
         print('has nan')
         predictions = np.nan_to_num(predictions)
     
-    print('predictions', predictions, type(predictions))
+    # print('predictions', predictions, type(predictions))
 
     argmax_predictions = predictions.argmax(axis=-1)
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(argmax_predictions.tolist(), references))
