@@ -16,6 +16,8 @@ from torch.nn import (
 
 import evaluate
 
+from torchcrf import CRF
+
 import torch
 import torch.nn as nn
 import pandas as pd
@@ -33,40 +35,35 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         config: T5Config,
         custom_num_labels,
         custom_dropout_rate,
+        use_crf=False,
     ):
         super().__init__(config)
         self.custom_num_labels = custom_num_labels
         self.custom_dropout_rate = custom_dropout_rate
+        self.use_crf = use_crf
 
         self.custom_dropout = nn.Dropout(self.custom_dropout_rate)
         self.custom_classifier = nn.Linear(
             in_features=self.config.hidden_size,
             out_features=self.custom_num_labels
         )
-        self.printed_initial_loss = False
+
+        if self.use_crf:
+            self.crf = CRF(num_tags=self.custom_num_labels, batch_first=True)
 
     # From https://github.com/huggingface/transformers/blob/v4.35.2/src/transformers/models/bert/modeling_bert.py#L1716
     def forward(
         self,
         input_ids=None,
         attention_mask=None,
-        # position_ids=None,
-        # head_mask=None,
         inputs_embeds=None,
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None
     ):
-        # print('--------------- forward ---------------')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # print('custom_classifier', self.custom_classifier.weight)
-        # print('custom_classifier nans', self.custom_classifier.weight.isnan().any())
-        # print('custom_classifier', self.custom_classifier.modules_to_save.default.weight)
-        # print('custom_classifier nans', self.custom_classifier.modules_to_save.default.weight.isnan().any())
-        # print('attention_mask', attention_mask)
-        # print(self.encoder)
         encoder_outputs = self.encoder(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -75,70 +72,38 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        # print('self.encoder', super().forward)
-
-        # print('self.config.hidden_size', self.config.hidden_size)
-        # print('self.custom_num_labels', self.custom_num_labels)
-        # print()
-        # print('encoder_outputs.last_hidden_state', encoder_outputs.last_hidden_state)
-        # print('encoder_outputs.last_hidden_state shape', encoder_outputs.last_hidden_state.shape)
 
         sequence_output = encoder_outputs['last_hidden_state']
-
-        # print('sequence_output', sequence_output)
-        # print('sequence_output min', sequence_output.min())
-        # print('sequence_output max', sequence_output.max())
-        # print('sequence_output hasnan', sequence_output.isnan().any())
-        sequence_output = self.custom_dropout(sequence_output)
-        # print('sequence_output dropout', sequence_output)
-        logits = self.custom_classifier(sequence_output)
-        # print('sequence_output linear', sequence_output)
-
-        # print(self.custom_num_labels)
-        # print(self.custom_classifier.modules_to_save.default.weight)
-
-        # print(labels)
-        loss = None
         if labels is not None:
-            # print('found labels')
-            # print('labels', labels.view(-1, self.custom_num_labels))
-            loss_fct = CrossEntropyLoss()
+            sequence_output = self.custom_dropout(sequence_output)
+        logits = self.custom_classifier(sequence_output)
 
-            # print('logits.device', logits.device)
-            labels = labels.to(logits.device)
-            # print(labels)
-            # print('labels', labels.view(-1))
-            # print('labels', labels.view(-1).shape)
-            # print('labels hasnan', labels.view(-1).isnan().any())
-            # print('logits', logits.view(-1, self.custom_num_labels))
-            # print('logits', logits.view(-1, self.custom_num_labels).shape)
-            # print('logits hasnan', logits.view(-1, self.custom_num_labels).isnan().any())
-            # print('logits', logits.view(-1, self.custom_num_labels).argmax(dim=-1))
-            # print()
-
-            loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
-            # print('loss', loss)
-
-        # print('return_dict', return_dict)
+        loss = None
+        decoded_tags = None
+        if self.use_crf:
+            if labels is not None:
+                log_likelihood = self.crf(emissions=logits, tags=labels, mask=attention_mask.type(torch.uint8))
+                loss = -log_likelihood
+            else:
+                decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
+        else:
+            if labels is not None:
+                loss_fct = CrossEntropyLoss()
+                labels = labels.to(self.device)
+                loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
+            
+        # print('decoded_tags', decoded_tags, type(decoded_tags))
+        # print('logits', logits, logits.shape)
         # print('loss', loss)
-        # print('logits', logits)
-        # print('labels', labels)
-        # print('encoder_outputs.attentions', encoder_outputs.attentions)
-        # print('encoder_outputs.hidden_states', encoder_outputs.hidden_states)
-        # print(*encoder_outputs)
-        # print('------------- end forward -------------')
-        # print('custom_classifier', self.custom_classifier.modules_to_save.default.weight)
-        # print('custom_classifier nans', self.custom_classifier.modules_to_save.default.weight.isnan().any())
-        if not self.printed_initial_loss:
-            print('loss', loss)
-            self.printed_initial_loss = True
+        # print('logic', logits if not self.use_crf else decoded_tags)
 
         if not return_dict:
             output = (logits,) + encoder_outputs[2:]
             return ((loss,) + output) if loss is not None else output
         return modeling_outputs.TokenClassifierOutput(
             loss=loss,
-            logits=logits,
+            logits=logits if decoded_tags is None else decoded_tags,
+            # logits=logits,
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,
         )
@@ -189,23 +154,19 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
 
         mean_sequence_output = torch.mean(sequence_output, dim=1)
 
-        print(mean_sequence_output.shape)
-        print(mean_sequence_output)
+        # print(mean_sequence_output.shape)
+        # print(mean_sequence_output)
 
         logits = self.custom_classifier(mean_sequence_output)
 
-        print(logits.shape)
-        print(logits)
+        # print(logits.shape)
+        # print(logits)
 
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             labels = labels.to(logits.device)
             loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
-
-        if not self.printed_initial_loss:
-            print('loss', loss)
-            self.printed_initial_loss = True
 
         if not return_dict:
             output = (logits,) + encoder_outputs[2:]
@@ -217,6 +178,10 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
             attentions=encoder_outputs.attentions,
         )
 
+
+###################################################
+# Helper Functions
+###################################################
 
 
 def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder: dict) -> Dataset:
@@ -232,6 +197,8 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
     for split_name, split in splits.items():
         if sequence_type:
             data_split = data[data.Type == sequence_type]
+        else:
+            data_split = data
         if dataset_size:
             data_split = data_split[data_split.Partition_No.isin(split)].sample(n=dataset_size * len(split), random_state=1)
         else:
@@ -265,19 +232,26 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
 #     return DatasetDict(datasets)
 
 
-def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelForTokenClassification, attention_mask=None, labels=None, device='cpu'):
+def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelForTokenClassification, attention_mask=None, labels=None, device='cpu', viterbi_decoding=False):
     tokenized_string = tokenizer.encode(sequence, padding=True, truncation=True, return_tensors="pt", max_length=1024).to(device)
+    # print(tokenized_string.shape)
+    # print(labels.shape)
+    # print(attention_mask.shape)
     with torch.no_grad():
         output = model(
             input_ids=tokenized_string.to(device),
-            labels=labels,
+            labels=None if viterbi_decoding else labels,
             attention_mask=attention_mask,
             )
     return output
 
 
-def translate_logits(logits):
-    return [src.config.label_decoding[x] for x in logits.argmax(-1).tolist()[0]]
+def translate_logits(logits, viterbi_decoding=False):
+    # print('logits', logits, type(logits))
+    if viterbi_decoding:
+        return [src.config.label_decoding[x] for x in logits[0]]
+    else:
+        return [src.config.label_decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
 
 accuracy_metric = evaluate.load("accuracy")
@@ -294,6 +268,8 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
     if np.isnan(predictions).any():
         print('has nan')
         predictions = np.nan_to_num(predictions)
+    
+    print('predictions', predictions, type(predictions))
 
     argmax_predictions = predictions.argmax(axis=-1)
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(argmax_predictions.tolist(), references))
@@ -316,3 +292,5 @@ def compute_metrics(p):
     predictions, references = p
     results = batch_eval_elementwise(predictions=predictions, references=references)
     return results
+
+
