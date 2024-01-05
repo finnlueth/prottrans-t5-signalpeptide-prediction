@@ -49,7 +49,10 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         )
 
         if self.use_crf:
-            self.crf = CRF(num_tags=self.custom_num_labels, batch_first=True)
+            self.crf = CRF(
+                num_tags=self.custom_num_labels,
+                batch_first=True
+            )
 
     # From https://github.com/huggingface/transformers/blob/v4.35.2/src/transformers/models/bert/modeling_bert.py#L1716
     def forward(
@@ -74,18 +77,26 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         )
 
         sequence_output = encoder_outputs['last_hidden_state']
-        if labels is not None:
-            sequence_output = self.custom_dropout(sequence_output)
+
+        # if labels is not None:
+        sequence_output = self.custom_dropout(sequence_output)
         logits = self.custom_classifier(sequence_output)
 
         loss = None
         decoded_tags = None
         if self.use_crf:
             if labels is not None:
-                print('logits', logits.shape, logits)
-                print('labels', labels.shape, labels)
-                print('attention_mask', attention_mask.shape, attention_mask)
-                log_likelihood = self.crf(emissions=logits, tags=labels, mask=attention_mask.type(torch.uint8))
+                logits_re = logits[:, :-1, :]
+                labels_re = labels[:, :-1]
+                attention_mask_re = attention_mask[:, :-1]
+                print('logits', logits_re.shape, logits_re.dtype, logits_re)
+                print('labels', labels_re.shape, labels_re.dtype, labels_re)
+                print('attention_mask', attention_mask_re.shape, attention_mask_re.dtype, attention_mask_re)
+                log_likelihood = self.crf(
+                    emissions=logits_re,
+                    tags=labels_re,
+                    mask=attention_mask_re.type(torch.uint8)
+                )
                 loss = -log_likelihood
             else:
                 decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
@@ -94,6 +105,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
                 loss_fct = CrossEntropyLoss()
                 labels = labels.to(self.device)
                 loss = loss_fct(logits.view(-1, self.custom_num_labels), labels.view(-1))
+                # print(loss)
             
         # print('decoded_tags', decoded_tags, type(decoded_tags))
         # print('logits', logits, logits.shape)
@@ -195,6 +207,25 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
 
 
 def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict, sequence_type=None) -> DatasetDict:
+    """
+    Creates datasets for different splits based on the given parameters.
+
+    Args:
+        splits (dict): A dictionary where keys are split names (e.g., 'train', 'test') and values are lists of partition numbers.
+        tokenizer (T5Tokenizer): An instance of the T5Tokenizer for tokenizing sequences.
+        data (pd.DataFrame): A pandas DataFrame containing the data to be split into datasets.
+        annotations_name (str): The name of the column in 'data' that contains annotations ('Label' or 'Type').
+        dataset_size (int): The number of examples per partition to include in each split. If None, include all examples.
+        encoder (dict): A dictionary mapping annotations to their encoded form.
+        sequence_type (Optional[str]): The type of sequence to filter from 'data'. If None, use all data.
+
+    Returns:
+        DatasetDict: A dictionary where keys are split names and values are corresponding 'Dataset' objects with tokenized sequences and labels.
+
+    Description:
+        This function processes and tokenizes data for different splits (e.g., 'train', 'test') based on specified parameters. It filters data by sequence type, samples a specified number of examples per partition, tokenizes sequences, and adds labels. The resulting tokenized data and labels are returned as 'Dataset' objects within a 'DatasetDict'.
+    """
+
     datasets = {}
 
     for split_name, split in splits.items():
@@ -202,6 +233,7 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
             data_split = data[data.Type == sequence_type]
         else:
             data_split = data
+            
         if dataset_size:
             data_split = data_split[data_split.Partition_No.isin(split)].sample(n=dataset_size * len(split), random_state=1)
         else:
@@ -263,6 +295,11 @@ recall_metric = evaluate.load("recall")
 f1_metric = evaluate.load("f1")
 # roc_auc_score_metric = evaluate.load("roc_auc", "multiclass")
 matthews_correlation_metric = evaluate.load("matthews_correlation")
+
+
+###################################################
+# Metrics
+###################################################
 
 
 def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
