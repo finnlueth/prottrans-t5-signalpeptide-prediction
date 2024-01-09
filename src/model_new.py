@@ -202,11 +202,11 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         if not return_dict:
             output = (logits,) + encoder_outputs[2:]
             return ((loss,) + output) if loss is not None else output
-        return modeling_outputs.TokenClassifierOutput(
+        return modeling_outputs.SequenceClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=encoder_outputs.hidden_states,
-            attentions=encoder_outputs.attentions,
+            hidden_states=encoder_outputs['hidden_states'],
+            attentions=encoder_outputs['attentions'],
         )
 
 
