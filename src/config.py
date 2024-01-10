@@ -33,10 +33,10 @@ select_decoding_type = {'NO_SP': label_decoding_NO_SP, 'SP': label_decoding_SP, 
 
 # Dataset URLs
 urls = {
-    '6_SignalP_6.0_Training_set.fasta': 'https://services.healthtech.dtu.dk/services/SignalP-6.0/public_data/train_set.fasta',
-    '6_SignalP_5.0_Benchmark_set.fasta': 'https://services.healthtech.dtu.dk/services/SignalP-6.0/public_data/benchmark_set_sp5.fasta',
-    '5_SignalP_5.0_Training_set.fasta': 'https://services.healthtech.dtu.dk/services/SignalP-5.0/train_set.fasta',
-    '5_SignalP_5.0_Benchmark_set.fasta': 'https://services.healthtech.dtu.dk/services/SignalP-5.0/benchmark_set.fasta',
+    '6_SignalP_6.0_Training_set.fasta':     'https://services.healthtech.dtu.dk/services/SignalP-6.0/public_data/train_set.fasta',
+    '6_SignalP_5.0_Benchmark_set.fasta':    'https://services.healthtech.dtu.dk/services/SignalP-6.0/public_data/benchmark_set_sp5.fasta',
+    '5_SignalP_5.0_Training_set.fasta':     'https://services.healthtech.dtu.dk/services/SignalP-5.0/train_set.fasta',
+    '5_SignalP_5.0_Benchmark_set.fasta':    'https://services.healthtech.dtu.dk/services/SignalP-5.0/benchmark_set.fasta',
 }
 
 # Debug
@@ -46,8 +46,8 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-# dataset_size = None
-dataset_size = 3
+dataset_size = None
+# dataset_size = 3
 
 # Training
 steps = 30

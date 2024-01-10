@@ -1,6 +1,6 @@
 {
   "auto_mapping": {
-    "base_model_class": "T5EncoderModelForTokenClassification",
+    "base_model_class": "T5EncoderModelForSequenceClassification",
     "parent_library": "src.model_new"
   },
   "base_model_name_or_path": "Rostlab/prot_t5_xl_uniref50",
@@ -13,7 +13,8 @@
   "lora_alpha": 16,
   "lora_dropout": 0.05,
   "modules_to_save": [
-    "custom_classifier"
+    "custom_classifier_in",
+    "custom_classifier_out"
   ],
   "peft_type": "LORA",
   "r": 8,
