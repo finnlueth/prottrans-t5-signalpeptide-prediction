@@ -325,12 +325,12 @@ def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelFo
     return output
 
 
-def translate_logits(logits, viterbi_decoding=False):
+def translate_logits(logits, decoding, viterbi_decoding=False):
     # print('logits', logits, type(logits))
     if viterbi_decoding:
-        return [src.config.label_decoding[x] for x in logits[0]]
+        return [src.config.decoding[x] for x in logits[0]]
     else:
-        return [src.config.label_decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
+        return [decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
 
 ###################################################
