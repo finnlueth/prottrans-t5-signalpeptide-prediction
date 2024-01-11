@@ -6,6 +6,8 @@ splits = {
     'test': [4]
 }
 
+splits_all = {'all': [0, 1, 2, 3, 4]}
+
 # Encodings
 label_encoding = {"I": 0, "L": 1, "M": 2, "O": 3, "S": 4, "T": 5}
 label_decoding = dict(zip(label_encoding.values(), label_encoding.keys()))
@@ -46,8 +48,8 @@ VERBOSE = True
 dropout_rate = 0.1
 
 # Data
-dataset_size = None
-# dataset_size = 3
+# dataset_size = None
+dataset_size = 3
 
 # Training
 steps = 30

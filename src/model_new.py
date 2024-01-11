@@ -192,27 +192,25 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         sequence_output = encoder_outputs['last_hidden_state']
         # sequence_output = self.custom_dropout(sequence_output)
 
+        # print('sequence_output.requires_grad', sequence_output.requires_grad)
         # print(mean_sequence_output.shape)
         # print(mean_sequence_output)
-
         # print('sequence_output', sequence_output[:, 0, :].shape, sequence_output[:, 0, :])
         # print()
         # print('sequence_output', sequence_output.shape, sequence_output)
 
-        mean_sequence_output = torch.mean(sequence_output, dim=1)
-        # print('mean_sequence_output', mean_sequence_output)
-        logits = self.custom_dropout(mean_sequence_output)
+        logits = sequence_output.mean(dim=1)
+        print('mean_sequence_output', logits.shape, logits)
+        logits = self.custom_dropout(logits)
         # print('custom_dropout', logits)
         logits = self.custom_classifier_in(logits)
         # print('custom_classifier_in', logits)
-        logits = torch.tanh(logits)
+        logits = logits.tanh()
         # print('tanh', logits)
         logits = self.custom_dropout(logits)
         # print('custom_dropout', logits)
         logits = self.custom_classifier_out(logits)
         # print('custom_classifier_out', logits)
-
-        # logits = self.custom_classifier(mean_sequence_output)
 
         # print(logits.shape)
         # print(logits)
@@ -228,7 +226,7 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         return modeling_outputs.SequenceClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=encoder_outputs.hidden_states,
+            hidden_states=encoder_outputs.last_hidden_state,
             attentions=encoder_outputs.attentions,
         )
 
@@ -245,7 +243,7 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
     return dataset
 
 
-def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, dataset_size: int, encoder: dict, sequence_type=None) -> DatasetDict:
+def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, encoder: dict, dataset_size: int = None, sequence_type=None) -> DatasetDict:
     """
     Creates datasets for different splits based on the given parameters.
 
@@ -333,6 +331,29 @@ def translate_logits(logits, decoding, viterbi_decoding=False):
         return [decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
 
+def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, attention_mask=None, device='cpu', result_type=None):
+    adapter_location = '/models/moe_v1_'
+    if not result_type:
+        gate_preds = src.model_new.predict_model(
+            sequence=sequence,
+            tokenizer=tokenizer,
+            model=model_gate,
+            labels=labels,
+            attention_mask=attention_mask,
+            device=device,
+            )
+
+        result_type = src.model_new.translate_logits(
+            logits=gate_preds.logits.unsqueeze(0),
+            decoding=src.config.type_decoding
+            )[0]
+
+    expert_adapter_location = adapter_location+'expert_'+result_type
+    # model_expert.load_adapter('../'+expert_adapter_location)
+    print(result_type)
+    print(expert_adapter_location)
+
+
 ###################################################
 # Plots
 ###################################################
@@ -365,7 +386,7 @@ accuracy_metric = evaluate.load("accuracy")
 precision_metric = evaluate.load("precision")
 recall_metric = evaluate.load("recall")
 f1_metric = evaluate.load("f1")
-# roc_auc_score_metric = evaluate.load("roc_auc", "multiclass")
+roc_auc_score_metric = evaluate.load("roc_auc", "multiclass")
 matthews_correlation_metric = evaluate.load("matthews_correlation")
 
 
@@ -375,8 +396,6 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
     if np.isnan(predictions).any():
         print('has nan')
         predictions = np.nan_to_num(predictions)
-
-    # print('predictions', predictions, type(predictions))
 
     argmax_predictions = predictions.argmax(axis=-1)
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(argmax_predictions.tolist(), references))
@@ -399,5 +418,3 @@ def compute_metrics(p):
     predictions, references = p
     results = batch_eval_elementwise(predictions=predictions, references=references)
     return results
-
-
