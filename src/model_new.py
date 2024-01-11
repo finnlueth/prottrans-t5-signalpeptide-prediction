@@ -92,20 +92,20 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         decoded_tags = None
         if self.use_crf:
             if labels is not None:
-                logits_re = logits[:, :-1, :]
-                labels_re = labels[:, :-1]
-                attention_mask_re = attention_mask[:, :-1]
-                # print('logits', logits_re.shape, logits_re.dtype, logits_re)
-                print('logits', logits_re.shape, logits_re.dtype, logits_re.min(), logits_re.max())
-                # print('labels', labels_re.shape, labels_re.dtype, labels_re)
-                print('labels', labels_re.shape, labels_re.dtype, labels_re.min(), labels_re.max())
-                # print('attention_mask', attention_mask_re.shape, attention_mask_re.dtype, attention_mask_re)
+                logits_crf = logits[:, :-1, :]
+                labels_crf = labels[:, :-1]
+                attention_mask_crf = attention_mask[:, :-1]
+                attention_mask_crf[labels_crf == -100] = 0
+                labels_crf[labels_crf == -100] = 0
+                # print('logits', logits_crf.shape, logits_crf.dtype, logits_crf, logits_crf.min(), logits_crf.max())
+                # print('labels', labels_crf.shape, labels_crf.dtype, labels_crf, labels_crf.min(), labels_crf.max())
+                # print('attention_mask', attention_mask_crf.shape, attention_mask_crf.dtype, attention_mask_crf)
                 log_likelihood = self.crf(
-                    emissions=logits_re,
-                    tags=labels_re,
-                    mask=attention_mask_re.type(torch.uint8)
+                    emissions=logits_crf,
+                    tags=labels_crf,
+                    mask=attention_mask_crf.type(torch.uint8)
                 )
-                loss = -log_likelihood
+                loss = -log_likelihood/1000
                 # print('neglog_likelihood', loss)
             else:
                 decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
