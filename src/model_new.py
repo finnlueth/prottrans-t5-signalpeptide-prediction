@@ -326,7 +326,7 @@ def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelFo
 def translate_logits(logits, decoding, viterbi_decoding=False):
     # print('logits', logits, type(logits))
     if viterbi_decoding:
-        return [src.config.decoding[x] for x in logits[0]]
+        return [decoding[x] for x in logits[0]]
     else:
         return [decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
@@ -371,8 +371,8 @@ def make_confusion_matrix(data_cm, decoding):
     )
 
     ax.set_title('Confusion Matrix')
-    ax.set_xlabel('Actual')
-    ax.set_ylabel('Predicted')
+    ax.set_xlabel('Predicted Label')
+    ax.set_ylabel('True Label')
 
     return ax
 
@@ -400,8 +400,8 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
     argmax_predictions = predictions.argmax(axis=-1)
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(argmax_predictions.tolist(), references))
 
-    lst1, lst2 = zip(*vals)
-    confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst1), y_pred=np.concatenate(lst2))
+    lst_pred, lst_true = zip(*vals)
+    confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst_true), y_pred=np.concatenate(lst_pred))
 
     results.update({'accuracy_metric': np.average([accuracy_metric.compute(predictions=x, references=y)['accuracy'] for x, y in vals])})
     results.update({'precision_metric': np.average([precision_metric.compute(predictions=x, references=y, average='micro')['precision'] for x, y in vals])})
