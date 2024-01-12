@@ -361,8 +361,8 @@ def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, at
 
 
 def confusion_matrix_plot(df_cm, decoding):
-    plt.figure()
-    
+    plt.figure(figsize=(16, 9))
+
     ax = sns.heatmap(
         df_cm,
         annot=True,
@@ -376,8 +376,9 @@ def confusion_matrix_plot(df_cm, decoding):
     ax.set_ylabel('True Label')
     return ax
 
+
 def loss_plot(df_log):
-    plt.figure()
+    plt.figure(figsize=(16, 9))
     sns.lineplot(x=df_log.index, y=df_log['loss'], label='Training Loss', color='orange')
     sns.lineplot(x=df_log.index, y=df_log['eval_loss'], label='Validation Loss', color='blue')
     sns.lineplot(x=df_log.index, y=df_log['eval_accuracy_metric'], label='Accuracy', linestyle='--', color='green')
@@ -394,6 +395,7 @@ def loss_plot(df_log):
     
     return plt
 
+
 # def validation_evaluation_plots(df_training_log: pd.DataFrame, decoding):
 #     # print(decoding)
 #     CM = []
@@ -406,9 +408,7 @@ def loss_plot(df_log):
 #         # CM.append(cm)
         
 #     lp = loss_plot(df_training_log)
-        
-    
-    return lp
+    # return lp
 
 
 ###################################################
