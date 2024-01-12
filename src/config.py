@@ -1,4 +1,5 @@
 base_model_name = 'Rostlab/prot_t5_xl_uniref50'
+model_version = 1
 
 splits = {
     'train': [0, 1, 2],
@@ -55,12 +56,12 @@ dataset_size = None
 steps = 30
 lr = 1e-4
 batch_size = 16
-num_epochs = 1
+num_epochs = 3
 # num_epochs = 2
 save_steps = 100
 logging_steps = 1
 # eval_steps = steps*5
-eval_steps = 1
+eval_steps = 50
 # metric = compute_metrics_fast
 
 model_name = 'linear_model_v4'

@@ -1,6 +1,7 @@
 import gc
 import time
 
+import matplotlib.pyplot as plt
 import seaborn as sns
 
 from transformers import (
@@ -359,11 +360,11 @@ def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, at
 ###################################################
 
 
-def make_confusion_matrix(data_cm, decoding):
-
-    print(decoding)
+def confusion_matrix_plot(df_cm, decoding):
+    plt.figure()
+    
     ax = sns.heatmap(
-        data_cm,
+        df_cm,
         annot=True,
         xticklabels=[decoding[label] for label in range(len(decoding))],
         yticklabels=[decoding[label] for label in range(len(decoding))],
@@ -373,8 +374,41 @@ def make_confusion_matrix(data_cm, decoding):
     ax.set_title('Confusion Matrix')
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
-
     return ax
+
+def loss_plot(df_log):
+    plt.figure()
+    sns.lineplot(x=df_log.index, y=df_log['loss'], label='Training Loss', color='orange')
+    sns.lineplot(x=df_log.index, y=df_log['eval_loss'], label='Validation Loss', color='blue')
+    sns.lineplot(x=df_log.index, y=df_log['eval_accuracy_metric'], label='Accuracy', linestyle='--', color='green')
+    # sns.lineplot(x=df_log.index, y=df_log['eval_precision_metric'], label='Precision', linestyle=':', color='purple')
+    # sns.lineplot(x=df_log.index, y=df_log['eval_recall_metric'], label='Recall', linestyle='-.', color='orange')
+    # sns.lineplot(x=df_log.index, y=df_log['eval_f1_metric'], label='F1 Score', linestyle='-', color='red')
+    sns.lineplot(x=df_log.index, y=df_log['eval_matthews_correlation'], label='Matthews Correlation', linestyle='--', color='brown')
+
+    plt.xlabel('Step')
+    plt.ylabel('Metrics')
+    plt.title('Training Loss and Evaluation Metrics')
+
+    plt.legend()
+    
+    return plt
+
+# def validation_evaluation_plots(df_training_log: pd.DataFrame, decoding):
+#     # print(decoding)
+#     CM = []
+    
+#     # for x in df_training_log['eval_confusion_matrix'][df_training_log['eval_confusion_matrix'].notnull()]:
+#     #     cm = confusion_matrix_plot(
+#     #         data_cm=x,
+#     #         decoding=decoding
+#     #         )
+#         # CM.append(cm)
+        
+#     lp = loss_plot(df_training_log)
+        
+    
+    return lp
 
 
 ###################################################
@@ -417,4 +451,27 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
 def compute_metrics(p):
     predictions, references = p
     results = batch_eval_elementwise(predictions=predictions, references=references)
+    return results
+
+def compute_metrics_crf(p):
+    predictions, references = p
+    results = {}
+
+    if np.isnan(predictions).any():
+        print('has nan')
+        predictions = np.nan_to_num(predictions)
+        
+    vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(predictions.tolist(), references))
+    
+    lst_pred, lst_true = zip(*vals)
+    confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst_true), y_pred=np.concatenate(lst_pred))
+    
+    results.update({'accuracy_metric': np.average([accuracy_metric.compute(predictions=x, references=y)['accuracy'] for x, y in vals])})
+    results.update({'precision_metric': np.average([precision_metric.compute(predictions=x, references=y, average='micro')['precision'] for x, y in vals])})
+    results.update({'recall_metric': np.average([recall_metric.compute(predictions=x, references=y, average='micro')['recall'] for x, y in vals])})
+    results.update({'f1_metric': np.average([f1_metric.compute(predictions=x, references=y, average='micro')['f1'] for x, y in vals])})
+    # results.update({'roc_auc': [roc_auc_score_metric.compute(prediction_scores=x, references=y, multi_class='ovr', average=None)['roc_auc'] for x, y in zip(softmax_predictions, references)]})
+    results.update({'matthews_correlation': np.average([matthews_correlation_metric.compute(predictions=x, references=y, average='micro')['matthews_correlation'] for x, y in vals])})
+    results.update({'confusion_matrix': confusion_matrix})
+
     return results
