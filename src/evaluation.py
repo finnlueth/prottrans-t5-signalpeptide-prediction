@@ -17,56 +17,56 @@ def encode_sequence(sequence, encoding):
     return [encoding[x] for x in sequence]
 
 
-def evaluate(predictions,  targets, encoding, decoding, mask=None):
+def evaluate(targets, predictions, encoding, decoding, mask=None):
     result = deque()
-    for targets, predictions in zip(predictions, targets):
-        CM = confusion_matrix(
-            y_true=targets,
-            y_pred=predictions,
-            labels=list(encoding.values()),
-        )
-        FP = CM.sum(axis=0) - np.diag(CM)
-        FN = CM.sum(axis=1) - np.diag(CM)
-        TP = np.diag(CM)
-        TN = CM.sum() - (FP + FN + TP)
+    # for targets, predictions in zip(predictions, targets):
+    CM = confusion_matrix(
+        y_true=targets,
+        y_pred=predictions,
+        labels=list(encoding.values()),
+    )
+    FP = CM.sum(axis=0) - np.diag(CM)
+    FN = CM.sum(axis=1) - np.diag(CM)
+    TP = np.diag(CM)
+    TN = CM.sum() - (FP + FN + TP)
 
-        TPR = TP/(TP+FN)
-        TNR = TN/(TN+FP)
-        PPV = TP/(TP+FP)
-        NPV = TN/(TN+FN)
-        FPR = FP/(FP+TN)
-        FNR = FN/(TP+FN)
-        FDR = FP/(TP+FP)
-        FOR = FN/(TN+FN)
+    TPR = TP/(TP+FN)
+    TNR = TN/(TN+FP)
+    PPV = TP/(TP+FP)
+    NPV = TN/(TN+FN)
+    FPR = FP/(FP+TN)
+    FNR = FN/(TP+FN)
+    FDR = FP/(TP+FP)
+    FOR = FN/(TN+FN)
 
-        ACC = (TP+TN)/(TP+FP+FN+TN)
-        F1 = 2*(PPV*TPR)/(PPV+TPR)
+    ACC = (TP+TN)/(TP+FP+FN+TN)
+    F1 = 2*(PPV*TPR)/(PPV+TPR)
 
-        MCC_1 = matthews_corrcoef(targets, predictions)
-        MCC_2 = (TP*TN-FP*FN)/np.sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
-        MCC_3 = np.sqrt(PPV*TPR*TNR*NPV) - np.sqrt(FDR*FNR*FPR*FOR)
-        
-        values_dict = {
-            'CM': CM,
-            'FP': FP,
-            'FN': FN,
-            'TP': TP,
-            'TN': TN,
-            'TPR': TPR,
-            'TNR': TNR,
-            'PPV': PPV,
-            'NPV': NPV,
-            'FPR': FPR,
-            'FNR': FNR,
-            'FDR': FDR,
-            'ACC': ACC,
-            'F1': F1,
-            'MCC_1': MCC_1,
-            'MCC_2': MCC_2,
-            'MCC_3': MCC_3
-        }
-        
-        result.append(values_dict)
+    MCC_1 = matthews_corrcoef(targets, predictions)
+    MCC_2 = (TP*TN-FP*FN)/np.sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
+    MCC_3 = np.sqrt(PPV*TPR*TNR*NPV) - np.sqrt(FDR*FNR*FPR*FOR)
+    
+    values_dict = {
+        'CM': CM,
+        'FP': FP,
+        'FN': FN,
+        'TP': TP,
+        'TN': TN,
+        'TPR': TPR,
+        'TNR': TNR,
+        'PPV': PPV,
+        'NPV': NPV,
+        'FPR': FPR,
+        'FNR': FNR,
+        'FDR': FDR,
+        'ACC': ACC,
+        'F1': F1,
+        'MCC_1': MCC_1,
+        'MCC_2': MCC_2,
+        'MCC_3': MCC_3
+    }
+    
+    result.append(values_dict)
 
         # print('CM', CM)
         # print('FP', FP)

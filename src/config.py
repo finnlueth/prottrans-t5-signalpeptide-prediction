@@ -31,8 +31,8 @@ type_decoding = dict(zip(type_encoding.values(), type_encoding.keys()))
 
 select_encodings = {'Label': label_encoding, 'Type': type_encoding}
 
-select_encoding_type = {'NO_SP': label_encoding_NO_SP, 'SP': label_encoding_SP, 'LIPO': label_encoding_LIPO, 'TAT': label_encoding_TAT, 'ALL': label_encoding}
-select_decoding_type = {'NO_SP': label_decoding_NO_SP, 'SP': label_decoding_SP, 'LIPO': label_decoding_LIPO, 'TAT': label_decoding_TAT, 'ALL': label_decoding}
+select_encoding_type = {'ALL': label_encoding, 'NO_SP': label_encoding_NO_SP, 'SP': label_encoding_SP, 'LIPO': label_encoding_LIPO, 'TAT': label_encoding_TAT}
+select_decoding_type = {'ALL': label_decoding, 'NO_SP': label_decoding_NO_SP, 'SP': label_decoding_SP, 'LIPO': label_decoding_LIPO, 'TAT': label_decoding_TAT}
 
 # Dataset URLs
 urls = {

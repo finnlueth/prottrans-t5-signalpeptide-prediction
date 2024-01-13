@@ -43,6 +43,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
         use_crf=False,
     ):
         super().__init__(config)
+
         self.custom_num_labels = custom_num_labels
         self.custom_dropout_rate = custom_dropout_rate
         self.use_crf = use_crf
@@ -201,7 +202,7 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         # print('sequence_output', sequence_output.shape, sequence_output)
 
         logits = sequence_output.mean(dim=1)
-        print('mean_sequence_output', logits.shape, logits)
+        # print('mean_sequence_output', logits.shape, logits)
         logits = self.custom_dropout(logits)
         # print('custom_dropout', logits)
         logits = self.custom_classifier_in(logits)
@@ -244,31 +245,12 @@ def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder
     return dataset
 
 
-def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: str, encoder: dict, dataset_size: int = None, sequence_type=None) -> DatasetDict:
-    """
-    Creates datasets for different splits based on the given parameters.
-
-    Args:
-        splits (dict): A dictionary where keys are split names (e.g., 'train', 'test') and values are lists of partition numbers.
-        tokenizer (T5Tokenizer): An instance of the T5Tokenizer for tokenizing sequences.
-        data (pd.DataFrame): A pandas DataFrame containing the data to be split into datasets.
-        annotations_name (str): The name of the column in 'data' that contains annotations ('Label' or 'Type').
-        dataset_size (int): The number of examples per partition to include in each split. If None, include all examples.
-        encoder (dict): A dictionary mapping annotations to their encoded form.
-        sequence_type (Optional[str]): The type of sequence to filter from 'data'. If None, use all data.
-
-    Returns:
-        DatasetDict: A dictionary where keys are split names and values are corresponding 'Dataset' objects with tokenized sequences and labels.
-
-    Description:
-        This function processes and tokenizes data for different splits (e.g., 'train', 'test') based on specified parameters. It filters data by sequence type, samples a specified number of examples per partition, tokenizes sequences, and adds labels. The resulting tokenized data and labels are returned as 'Dataset' objects within a 'DatasetDict'.
-    """
-
+def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, annotations_name: list, dataset_size: int = None, sequence_type=None) -> DatasetDict:
     datasets = {}
 
     for split_name, split in splits.items():
-        if sequence_type:
-            data_split = data[data.Type == sequence_type]
+        if sequence_type and sequence_type != 'ALL':
+            data_split = data[data['Type'] == sequence_type]
         else:
             data_split = data
 
@@ -276,12 +258,16 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
             data_split = data_split[data_split.Partition_No.isin(split)].sample(n=dataset_size * len(split), random_state=1)
         else:
             data_split = data_split[data_split.Partition_No.isin(split)]
-        tokenized_sequences = tokenizer(data_split.Sequence.to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
+
+        tokenized_sequences = tokenizer(data_split['Sequence'].to_list(), padding=True, truncation=True, return_tensors="pt", max_length=1024)
         dataset = Dataset.from_dict(tokenized_sequences)
-        if annotations_name == 'Label':
-            dataset = dataset.add_column("labels", [[encoder[y] for y in x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
-        if annotations_name == 'Type':
-            dataset = dataset.add_column("labels", [encoder[x] for x in data_split[annotations_name].to_list()], new_fingerprint=None)
+        if 'Label' in annotations_name:
+            encoder = src.config.select_encoding_type[sequence_type]
+            # print(data_split)
+            dataset = dataset.add_column("labels", [[encoder[y] for y in x] for x in data_split['Label'].to_list()], new_fingerprint=None)
+        if 'Type' in annotations_name:
+            encoder = src.config.type_encoding
+            dataset = dataset.add_column("type", [encoder[x] for x in data_split['Type'].to_list()], new_fingerprint=None)
         datasets[split_name] = dataset
 
     # for x in datasets.values():
@@ -312,6 +298,7 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
 
 def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelForTokenClassification, attention_mask=None, labels=None, device='cpu', viterbi_decoding=False):
     tokenized_string = tokenizer.encode(sequence, padding=True, truncation=True, return_tensors="pt", max_length=1024).to(device)
+    print(tokenized_string)
     # print(tokenized_string.shape)
     # print(labels.shape)
     # print(attention_mask.shape)
@@ -332,9 +319,10 @@ def translate_logits(logits, decoding, viterbi_decoding=False):
         return [decoding[x] for x in logits.cpu().numpy().argmax(-1).tolist()[0]]
 
 
-def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, attention_mask=None, device='cpu', result_type=None):
-    adapter_location = '/models/moe_v1_'
+def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, attention_mask=None, device='cpu', result_type=None, use_crf=False):
+
     if not result_type:
+        print('Determining type...')
         gate_preds = src.model_new.predict_model(
             sequence=sequence,
             tokenizer=tokenizer,
@@ -348,11 +336,50 @@ def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, at
             logits=gate_preds.logits.unsqueeze(0),
             decoding=src.config.type_decoding
             )[0]
+        print('Found Type: ', result_type)
 
-    expert_adapter_location = adapter_location+'expert_'+result_type
-    # model_expert.load_adapter('../'+expert_adapter_location)
-    print(result_type)
-    print(expert_adapter_location)
+    try:
+        assert result_type in src.config.type_encoding.keys()
+    except Exception as e:
+        print(e)
+        print(f'Type "{result_type}" not found. Exiting...')
+
+    tmp_custom_classifier = nn.Linear(
+            in_features=model_expert.config.hidden_size,
+            out_features=len(src.config.select_decoding_type[result_type])
+        )
+    if use_crf:
+        tmp_crf = CRF(
+            num_tags=len(src.config.select_decoding_type[result_type]),
+            batch_first=True
+        )
+        model_expert.custom_classifier.weight = tmp_custom_classifier.weight
+        model_expert.custom_classifier.bias = tmp_custom_classifier.bias
+        model_expert.crf.start_transitions = tmp_crf.start_transitions
+        model_expert.crf.end_transitions = tmp_crf.end_transitions
+        model_expert.crf.transitions = tmp_crf.transitions
+
+    model_expert.set_adapter(result_type)
+
+    pred_logits = src.model_new.predict_model(
+        sequence=sequence,
+        tokenizer=tokenizer,
+        model=tokenizer,
+        labels=labels,
+        attention_mask=attention_mask,
+        device=device,
+        viterbi_decoding=use_crf,
+        )
+
+    pred_sequence = src.model_new.translate_logits(
+        logits=pred_logits.logits,
+        decoding=src.config.select_decoding_type[result_type],
+        viterbi_decoding=use_crf,
+        )
+
+    model_expert.unload()
+
+    return result_type, pred_sequence
 
 
 ###################################################
@@ -392,21 +419,21 @@ def loss_plot(df_log):
     plt.title('Training Loss and Evaluation Metrics')
 
     plt.legend()
-    
+
     return plt
 
 
 # def validation_evaluation_plots(df_training_log: pd.DataFrame, decoding):
 #     # print(decoding)
 #     CM = []
-    
+
 #     # for x in df_training_log['eval_confusion_matrix'][df_training_log['eval_confusion_matrix'].notnull()]:
 #     #     cm = confusion_matrix_plot(
 #     #         data_cm=x,
 #     #         decoding=decoding
 #     #         )
 #         # CM.append(cm)
-        
+
 #     lp = loss_plot(df_training_log)
     # return lp
 
@@ -453,6 +480,7 @@ def compute_metrics(p):
     results = batch_eval_elementwise(predictions=predictions, references=references)
     return results
 
+
 def compute_metrics_crf(p):
     predictions, references = p
     results = {}
@@ -460,12 +488,12 @@ def compute_metrics_crf(p):
     if np.isnan(predictions).any():
         print('has nan')
         predictions = np.nan_to_num(predictions)
-        
+
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(predictions.tolist(), references))
-    
+
     lst_pred, lst_true = zip(*vals)
     confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst_true), y_pred=np.concatenate(lst_pred))
-    
+
     results.update({'accuracy_metric': np.average([accuracy_metric.compute(predictions=x, references=y)['accuracy'] for x, y in vals])})
     results.update({'precision_metric': np.average([precision_metric.compute(predictions=x, references=y, average='micro')['precision'] for x, y in vals])})
     results.update({'recall_metric': np.average([recall_metric.compute(predictions=x, references=y, average='micro')['recall'] for x, y in vals])})
