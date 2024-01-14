@@ -56,12 +56,12 @@ dataset_size = None
 steps = 30
 lr = 1e-4
 batch_size = 16
-num_epochs = 3
+num_epochs = 1
 # num_epochs = 2
-save_steps = 100
+save_steps = 9999999
 logging_steps = 1
 # eval_steps = steps*5
-eval_steps = 50
+eval_steps = 300
 # metric = compute_metrics_fast
 
 model_name = 'linear_model_v4'

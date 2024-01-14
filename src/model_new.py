@@ -214,7 +214,6 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         logits = self.custom_classifier_out(logits)
         # print('custom_classifier_out', logits)
 
-        # print(logits.shape)
         # print(logits)
 
         loss = None
@@ -228,8 +227,8 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         return modeling_outputs.SequenceClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=encoder_outputs.last_hidden_state,
-            attentions=encoder_outputs.attentions,
+            # hidden_states=encoder_outputs.last_hidden_state,
+            # attentions=encoder_outputs.attentions,
         )
 
 
@@ -320,7 +319,6 @@ def translate_logits(logits, decoding, viterbi_decoding=False):
 
 
 def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, attention_mask=None, device='cpu', result_type=None, use_crf=False):
-
     if not result_type:
         print('Determining type...')
         gate_preds = src.model_new.predict_model(
@@ -389,13 +387,15 @@ def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, at
 
 def confusion_matrix_plot(df_cm, decoding):
     plt.figure(figsize=(16, 9))
+    sns.set(font_scale=2)
 
     ax = sns.heatmap(
         df_cm,
         annot=True,
         xticklabels=[decoding[label] for label in range(len(decoding))],
         yticklabels=[decoding[label] for label in range(len(decoding))],
-        fmt='d'
+        fmt='d',
+        label='big'
     )
 
     ax.set_title('Confusion Matrix')
@@ -453,10 +453,12 @@ matthews_correlation_metric = evaluate.load("matthews_correlation")
 
 def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
     results = {}
+    # print(predictions, references)
+    # print(type(predictions), type(references))
 
-    if np.isnan(predictions).any():
-        print('has nan')
-        predictions = np.nan_to_num(predictions)
+    # if np.isnan(predictions).any():
+    #     print('has nan')
+    #     predictions = np.nan_to_num(predictions)
 
     argmax_predictions = predictions.argmax(axis=-1)
     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(argmax_predictions.tolist(), references))
@@ -477,29 +479,36 @@ def batch_eval_elementwise(predictions: np.ndarray, references: np.ndarray):
 
 def compute_metrics(p):
     predictions, references = p
+    # if type(predictions) is tuple:
+    #     predictions = predictions[0]
+    # print(predictions)
+    # print(type(predictions))
+    # print(predictions[0].shape)
+    # print(predictions[1].shape)
+    # print(predictions[1])
+
     results = batch_eval_elementwise(predictions=predictions, references=references)
     return results
 
 
-def compute_metrics_crf(p):
-    predictions, references = p
-    results = {}
+# def compute_metrics_crf(p):
+#     predictions, references = p
+#     results = {}
+#     if np.isnan(predictions).any():
+#         print('has nan')
+#         predictions = np.nan_to_num(predictions)
 
-    if np.isnan(predictions).any():
-        print('has nan')
-        predictions = np.nan_to_num(predictions)
+#     vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(predictions.tolist(), references))
 
-    vals = list((np.array(p)[(r != -100)], np.array(r)[(r != -100)]) for p, r in zip(predictions.tolist(), references))
+#     lst_pred, lst_true = zip(*vals)
+#     confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst_true), y_pred=np.concatenate(lst_pred))
 
-    lst_pred, lst_true = zip(*vals)
-    confusion_matrix = sklearn.metrics.confusion_matrix(y_true=np.concatenate(lst_true), y_pred=np.concatenate(lst_pred))
+#     results.update({'accuracy_metric': np.average([accuracy_metric.compute(predictions=x, references=y)['accuracy'] for x, y in vals])})
+#     results.update({'precision_metric': np.average([precision_metric.compute(predictions=x, references=y, average='micro')['precision'] for x, y in vals])})
+#     results.update({'recall_metric': np.average([recall_metric.compute(predictions=x, references=y, average='micro')['recall'] for x, y in vals])})
+#     results.update({'f1_metric': np.average([f1_metric.compute(predictions=x, references=y, average='micro')['f1'] for x, y in vals])})
+#     # results.update({'roc_auc': [roc_auc_score_metric.compute(prediction_scores=x, references=y, multi_class='ovr', average=None)['roc_auc'] for x, y in zip(softmax_predictions, references)]})
+#     results.update({'matthews_correlation': np.average([matthews_correlation_metric.compute(predictions=x, references=y, average='micro')['matthews_correlation'] for x, y in vals])})
+#     results.update({'confusion_matrix': confusion_matrix})
 
-    results.update({'accuracy_metric': np.average([accuracy_metric.compute(predictions=x, references=y)['accuracy'] for x, y in vals])})
-    results.update({'precision_metric': np.average([precision_metric.compute(predictions=x, references=y, average='micro')['precision'] for x, y in vals])})
-    results.update({'recall_metric': np.average([recall_metric.compute(predictions=x, references=y, average='micro')['recall'] for x, y in vals])})
-    results.update({'f1_metric': np.average([f1_metric.compute(predictions=x, references=y, average='micro')['f1'] for x, y in vals])})
-    # results.update({'roc_auc': [roc_auc_score_metric.compute(prediction_scores=x, references=y, multi_class='ovr', average=None)['roc_auc'] for x, y in zip(softmax_predictions, references)]})
-    results.update({'matthews_correlation': np.average([matthews_correlation_metric.compute(predictions=x, references=y, average='micro')['matthews_correlation'] for x, y in vals])})
-    results.update({'confusion_matrix': confusion_matrix})
-
-    return results
+#     return results
