@@ -96,6 +96,7 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
             if labels is not None:
                 logits_crf = logits[:, :-1, :]
                 labels_crf = labels[:, :-1]
+                # fix mask for shorter sequences
                 attention_mask_crf = attention_mask[:, :-1]
                 attention_mask_crf[labels_crf == -100] = 0
                 labels_crf[labels_crf == -100] = 0
@@ -232,9 +233,9 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         )
 
 
-###################################################
+######################################################################################################
 # Helper Functions
-###################################################
+######################################################################################################
 
 
 def df_to_dataset(tokenizer: T5Tokenizer, sequences: list, labels: list, encoder: dict) -> Dataset:
@@ -296,10 +297,9 @@ def create_datasets(splits: dict, tokenizer: T5Tokenizer, data: pd.DataFrame, an
 
 
 def predict_model(sequence: str, tokenizer: T5Tokenizer, model: T5EncoderModelForTokenClassification, attention_mask=None, labels=None, device='cpu', viterbi_decoding=False):
-    tokenized_string = tokenizer.encode(sequence, padding=True, truncation=True, return_tensors="pt", max_length=1024).to(device)
-    print(tokenized_string)
+    if tokenizer:
+        tokenized_string = tokenizer.encode(sequence, padding='max_length', max_length=71, truncation=True, return_tensors="pt").to(device)
     # print(tokenized_string.shape)
-    # print(labels.shape)
     # print(attention_mask.shape)
     with torch.no_grad():
         output = model(
