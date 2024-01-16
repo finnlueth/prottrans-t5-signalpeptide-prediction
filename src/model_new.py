@@ -111,7 +111,8 @@ class T5EncoderModelForTokenClassification(T5EncoderModel):
                 loss = -log_likelihood/1000
                 # print('neglog_likelihood', loss)
             else:
-                decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
+                # decoded_tags = self.crf.modules_to_save.default.decode(logits, mask=attention_mask.type(torch.uint8))
+                decoded_tags = self.crf.decode(logits, mask=attention_mask.type(torch.uint8))
         else:
             if labels is not None:
                 loss_fct = CrossEntropyLoss()
@@ -203,19 +204,11 @@ class T5EncoderModelForSequenceClassification(T5EncoderModel):
         # print('sequence_output', sequence_output.shape, sequence_output)
 
         logits = sequence_output.mean(dim=1)
-        # print('mean_sequence_output', logits.shape, logits)
         logits = self.custom_dropout(logits)
-        # print('custom_dropout', logits)
         logits = self.custom_classifier_in(logits)
-        # print('custom_classifier_in', logits)
         logits = logits.tanh()
-        # print('tanh', logits)
         logits = self.custom_dropout(logits)
-        # print('custom_dropout', logits)
         logits = self.custom_classifier_out(logits)
-        # print('custom_classifier_out', logits)
-
-        # print(logits)
 
         loss = None
         if labels is not None:
