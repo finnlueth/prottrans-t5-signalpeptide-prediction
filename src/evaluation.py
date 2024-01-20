@@ -17,13 +17,14 @@ def encode_sequence(sequence, encoding):
     return [encoding[x] for x in sequence]
 
 
-def evaluate(targets, predictions, encoding, decoding, mask=None):
-    result = deque()
-    # for targets, predictions in zip(predictions, targets):
+def evaluate(targets, predictions, labels=None, encoding=None, decoding=None, mask=None):
+    if not labels:
+        labels = list(encoding.values())
+
     CM = confusion_matrix(
         y_true=targets,
         y_pred=predictions,
-        labels=list(encoding.values()),
+        labels=labels,
     )
     FP = CM.sum(axis=0) - np.diag(CM)
     FN = CM.sum(axis=1) - np.diag(CM)
@@ -46,49 +47,33 @@ def evaluate(targets, predictions, encoding, decoding, mask=None):
     MCC_2 = (TP*TN-FP*FN)/np.sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
     MCC_3 = np.sqrt(PPV*TPR*TNR*NPV) - np.sqrt(FDR*FNR*FPR*FOR)
     
+    ERROR = 0
+    TOTAL_TARGETS = len(targets)
+    TOTAL_PREDICTIONS = len(predictions)
+    
     values_dict = {
         'CM': CM,
-        'FP': FP,
-        'FN': FN,
+        'ACC': ACC,
         'TP': TP,
         'TN': TN,
+        'FP': FP,
+        'FN': FN,
         'TPR': TPR,
         'TNR': TNR,
         'PPV': PPV,
-        'NPV': NPV,
         'FPR': FPR,
         'FNR': FNR,
+        'NPV': NPV,
         'FDR': FDR,
-        'ACC': ACC,
         'F1': F1,
         'MCC_1': MCC_1,
         'MCC_2': MCC_2,
-        'MCC_3': MCC_3
+        'MCC_3': MCC_3,
+        'ERROR': ERROR,
+        'TOTAL_TARGETS': TOTAL_TARGETS,
+        'TOTAL_PREDICTIONS': TOTAL_PREDICTIONS,
     }
-    
-    result.append(values_dict)
-
-        # print('CM', CM)
-        # print('FP', FP)
-        # print('FN', FN)
-        # print('TP', TP)
-        # print('TN', TN)
-
-        # print('TPR', TPR, np.nanmean(TPR))
-        # print('TNR', TNR, np.nanmean(TNR))
-        # print('PPV', PPV, np.nanmean(PPV))
-        # print('NPV', NPV, np.nanmean(NPV))
-        # print('FPR', FPR, np.nanmean(FPR))
-        # print('FNR', FNR, np.nanmean(FNR))
-        # print('FDR', FDR, np.nanmean(FDR))
-
-        # print('ACC', ACC, np.nanmean(ACC))
-        # print('F1', F1, np.nanmean(F1))
-
-        # print('MCC_1', MCC_1)
-        # print('MCC_2', MCC_2, np.nanmean(MCC_2))
-        # print('MCC_3', MCC_3, np.nanmean(MCC_3))
-    return list(result)
+    return values_dict
 
 
 def plot_mcc(data_mcc):
@@ -100,17 +85,21 @@ def plot_mcc(data_mcc):
     return ax
 
 
-def plot_confusion_matrix(data_cm, decoding):
-
+def plot_confusion_matrix(data_cm, labels, title='Confusion Matrix'):
     ax = sns.heatmap(
         data_cm,
         annot=True,
-        xticklabels=[decoding[label] for label in range(len(decoding))],
-        yticklabels=[decoding[label] for label in range(len(decoding))],
-        fmt='d'
+        # xticklabels=[decoding[label] for label in range(len(decoding))],
+        xticklabels=labels,
+        yticklabels=labels,
+        fmt='d',
     )
+    sns.set(rc={"figure.dpi": 300, 'savefig.dpi': 300})
+    sns.set(rc={'figure.figsize': (16, 9)})
+    sns.set(font_scale=2.4)
+    plt.yticks(rotation=0)
 
-    ax.set_title('Confusion Matrix')
+    ax.set_title(title)
     ax.set_xlabel('Actual')
     ax.set_ylabel('Predicted')
 

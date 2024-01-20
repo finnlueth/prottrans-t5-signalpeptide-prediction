@@ -378,7 +378,7 @@ def moe_inference(sequence, tokenizer, model_gate, model_expert, labels=None, at
 ###################################################
 
 
-def confusion_matrix_plot(df_cm, decoding):
+def confusion_matrix_plot(df_cm, decoding, title='Confusion Matrix'):
     plt.figure(figsize=(16, 9))
     sns.set(font_scale=2)
 
@@ -391,7 +391,7 @@ def confusion_matrix_plot(df_cm, decoding):
         label='big'
     )
 
-    ax.set_title('Confusion Matrix')
+    ax.set_title(title)
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
     return ax
