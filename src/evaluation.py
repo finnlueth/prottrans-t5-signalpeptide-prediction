@@ -8,6 +8,8 @@ from collections import deque
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import matthews_corrcoef
 
+import random
+
 
 def encode_sequences(sequences, encoding):
     return [encode_sequence(x, encoding) for x in sequences]
@@ -217,15 +219,28 @@ def plot_mcc_split_label_kingdom_facet_simple(df_mcc_values, Title="Barplot of M
 
 def evaluate_mcc(targets, predictions, labels):
     p = {}
+    
     for x in labels:
         target = [1 if y == x else 0 for y in targets]
         prediction = [1 if y == x else 0 for y in predictions]
-        # print(target)
-        # print(prediction)
-        # if target == prediction:
-        #     p.update({x: 1})
-        # else:
-        error = 0
-        p.update({x: [matthews_corrcoef(target, prediction), error]})  # noqa: E999
 
+        # number_errors = 1000
+        # slice_len = 10000
+        # errors = np.zeros(number_errors)
+        # for err in range(number_errors):
+        #     index = random.randint(1, len(target) - slice_len)
+        #     if target[index:index+slice_len] == prediction[index:index+slice_len]:
+        #         errors[err] = 1
+        #     else:
+        #         errors[err] = matthews_corrcoef(target[index:index+slice_len], prediction[index:index+slice_len])
+                
+        #     # print(errors[err])
+        #     # if errors[err] == 0:
+        #     #     print(target[index:index+slice_len])
+        #     #     print(prediction[index:index+slice_len])
+        # avg_err = np.mean(errors)
+        # error = np.sqrt(1/(number_errors-1) * (np.sum(errors-avg_err)**2))
+
+        error = 0
+        p.update({x: [matthews_corrcoef(target, prediction), error]})
     return p
