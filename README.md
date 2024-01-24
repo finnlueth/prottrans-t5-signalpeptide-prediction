@@ -1,5 +1,7 @@
 # prottrans-t5-signalpeptide-prediction
 
+PBL Seminar Project at Rostlab
+
 ## Links
 
 https://www.youtube.com/watch?v=rI3DQS0P2fk
